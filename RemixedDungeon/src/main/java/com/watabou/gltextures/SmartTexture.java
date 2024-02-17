@@ -17,10 +17,8 @@
 
 package com.watabou.gltextures;
 
-import android.graphics.Bitmap;
-
 import com.nyrds.platform.compatibility.RectF;
-import com.nyrds.platform.gfx.*;
+import com.nyrds.platform.gfx.BitmapData;
 import com.nyrds.platform.gl.Texture;
 
 import org.jetbrains.annotations.NotNull;
@@ -67,11 +65,11 @@ public class SmartTexture extends Texture {
 		wModeV = t;
 	}
 
-
+	@Override
 	public void bitmap( BitmapData bitmap ) {
-		handMade(bitmap.toBitmap());
+		handMade(bitmap, true );
 
-	}
+
 	public void bind() {
 		_bind();
 		if(!loaded) {
@@ -79,7 +77,7 @@ public class SmartTexture extends Texture {
 			super.wrap(wModeH,wModeV);
 
 			if(bitmap!=null) {
-				handMade(bitmap.toBitmap());
+				handMade(bitmap);
 			}
 
 			loaded = true;
@@ -87,7 +85,7 @@ public class SmartTexture extends Texture {
 	}
 
 	public void bitmap( Bitmap bitmap) {
-		this.bitmap = new BitmapData(bitmap);
+		this.bitmap = bitmap;
 		width = bitmap.getWidth();
 		height = bitmap.getHeight();
 	}
