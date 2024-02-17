@@ -68,6 +68,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -482,9 +483,18 @@ public class Dungeon {
                 LuaEngine.require(LuaEngine.SCRIPTS_LIB_STORAGE).get("serializeLevelData").call().checkjstring());
 
 
-        OutputStream output = FileSystem.getOutputStream(saveTo);
+        OutputStream output = null;
+        try {
+            output = FileSystem.getOutputStream(saveTo);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         Bundle.write(bundle, output);
-        output.close();
+        try {
+            output.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     //@AddTrace(name = "Dungeon.saveAllImpl")

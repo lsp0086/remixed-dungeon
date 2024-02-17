@@ -88,18 +88,44 @@ public class FileSystem {
 	static public void copyStream(InputStream in, OutputStream out) {
 			byte[] buffer = new byte[4096];
 			int read;
-			while ((read = in.read(buffer)) != -1) {
-				out.write(buffer, 0, read);
+			while (true) {
+				try {
+					if (!((read = in.read(buffer)) != -1)) break;
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				try {
+					out.write(buffer, 0, read);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
 			}
+		try {
 			in.close();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 
+		try {
 			out.flush();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		try {
 			out.close();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@SneakyThrows
 	static public void copyFile(String inputFile, OutputStream out) {
-		InputStream in = new FileInputStream(inputFile);
+		InputStream in = null;
+		try {
+			in = new FileInputStream(inputFile);
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 		copyStream(in, out);
 	}
 
@@ -110,7 +136,11 @@ public class FileSystem {
 			dir.mkdirs();
 		}
 
-		copyFile(inputFile, new FileOutputStream(outputFile));
+		try {
+			copyFile(inputFile, new FileOutputStream(outputFile));
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public static void zipFolderTo(OutputStream out, File srcFolder, int depth, FileFilter filter) throws IOException {

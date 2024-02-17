@@ -127,12 +127,12 @@ android {
 dependencies {
     implementation project(':annotation')
     annotationProcessor project(':processor')
-
+    implementation 'com.badlogicgames.gdx:gdx:1.9.10'
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'org.luaj:luaj-jse:3.0.1'
     implementation 'info.guardianproject.netcipher:netcipher:1.2'
     implementation 'org.hjson:hjson:3.0.0'
-
+    implementation "com.badlogicgames.gdx:gdx:1.9.10"
     androidImplementation 'com.google.guava:guava:31.1-android'
 
     androidImplementation 'com.google.android.ads.consent:consent-library:1.0.8'

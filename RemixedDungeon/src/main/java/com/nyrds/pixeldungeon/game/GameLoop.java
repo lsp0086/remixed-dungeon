@@ -21,13 +21,14 @@ import com.watabou.noosa.Gizmo;
 import com.watabou.noosa.NoosaScript;
 import com.watabou.noosa.Scene;
 import com.watabou.pixeldungeon.scenes.InterlevelScene;
+import com.watabou.pixeldungeon.scenes.PixelScene;
+import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.utils.SystemTime;
 
 import org.luaj.vm2.LuaError;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.SneakyThrows;
@@ -37,7 +38,6 @@ public class GameLoop {
     public static final AtomicInteger loadingOrSaving = new AtomicInteger();
     public static final Object stepLock = new Object();
 
-    public static final Object stepLock = new Object();
     public static final double[] MOVE_TIMEOUTS = new double[]{250, 500, 1000, 2000, 5000, 10000, 30000, 60000, Double.POSITIVE_INFINITY };
 
     public static String version = Utils.EMPTY_STRING;
@@ -160,7 +160,6 @@ public class GameLoop {
         switchScene(instance().sceneClass);
     }
 
-<<<<<<<<< Temporary merge branch 1
     public static boolean smallResScreen() {
         return width() <= 320 && height() <= 320;
     }
@@ -192,12 +191,11 @@ public class GameLoop {
     public static void switchNoFade(Class<? extends PixelScene> c) {
         PixelScene.noFade = true;
         switchScene(c);
-=========
+    }
     static public void runOnMainThread(Runnable runnable) {
         pushUiTask(() -> {
             Game.instance().runOnUiThread(runnable);
         });
->>>>>>>>> Temporary merge branch 2
     }
 
     public void shutdown() {
@@ -244,62 +242,56 @@ public class GameLoop {
                     task.run();
                 }
 
-<<<<<<<<< Temporary merge branch 1
-        if (framesSinceInit>2) {
-            Runnable task;
-            while ((task = uiTasks.poll()) != null) {
-                task.run();
-            }
-
-            if (!softPaused) {
-                try {
-                    step();
-                } catch (LuaError e) {
-                    throw ModdingMode.modException(e);
-                } catch (Exception e) {
-                    throw new TrackedRuntimeException(e);
-=========
-                if (!Game.softPaused && loadingOrSaving.get() == 0) {
+                if (!softPaused) {
                     try {
-                        if (requestedReset) {
-                            requestedReset = false;
-                            switchScene(sceneClass.newInstance());
-                            return;
-                        }
-
-                        while (!motionEvents.isEmpty()) {
-                            Touchscreen.processEvent(motionEvents.poll());
-                        }
-
-                        while (!keysEvents.isEmpty()) {
-                            Keys.processEvent(keysEvents.poll());
-                        }
-
+                        stepFunc();
                     } catch (LuaError e) {
                         throw ModdingMode.modException(e);
                     } catch (Exception e) {
                         throw new TrackedRuntimeException(e);
                     }
+                    if (!Game.softPaused && loadingOrSaving.get() == 0) {
+                        try {
+                            if (requestedReset) {
+                                requestedReset = false;
+                                switchScene(sceneClass.newInstance());
+                                return;
+                            }
+
+                            while (!motionEvents.isEmpty()) {
+                                Touchscreen.processEvent(motionEvents.poll());
+                            }
+
+                            while (!keysEvents.isEmpty()) {
+                                Keys.processEvent(keysEvents.poll());
+                            }
+
+                        } catch (LuaError e) {
+                            throw ModdingMode.modException(e);
+                        } catch (Exception e) {
+                            throw new TrackedRuntimeException(e);
+                        }
+                    }
                 }
             }
-        }
 
-        if (framesSinceInit > 2 && !Game.softPaused && loadingOrSaving.get() == 0) {
-            stepExecutor.execute(this::step);
-        }
+            if (framesSinceInit > 2 && !Game.softPaused && loadingOrSaving.get() == 0) {
+                stepExecutor.execute(this::stepFunc);
+            }
 
-        NoosaScript.get().resetCamera();
-        Gl.clear();
+            NoosaScript.get().resetCamera();
+            Gl.clear();
 
-        synchronized (stepLock) {
-            if (scene != null) {
-                scene.draw();
+            synchronized (stepLock) {
+                if (scene != null) {
+                    scene.draw();
+                }
             }
         }
     }
 
     @SneakyThrows
-    public void step() {
+    public void stepFunc() {
         synchronized (stepLock) {
             elapsed = timeScale * step * 0.001f;
             if (scene != null) {

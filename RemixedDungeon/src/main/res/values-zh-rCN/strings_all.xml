@@ -2410,6 +2410,10 @@
   <string name="Dungeon_Tips_21">这是用恶魔语写的。</string>
   <string name="Dungeon_Tips_22">这是用恶魔语写的。</string>
   <string name="Dungeon_Tips_23">这是用恶魔语写的。</string>
+  <string name="Facilitations_Names_0">收获季</string>
+  <string name="Facilitations_Names_1">自然之愈</string>
+  <string name="Facilitations_Names_2">魔力源泉</string>
+  <string name="Facilitations_Names_3">怪力</string>
   <string name="Challenges_Names_0">缩餐节食</string>
   <string name="Challenges_Names_1">信念护体</string>
   <string name="Challenges_Names_2">恐药病癖</string>
@@ -2836,10 +2840,6 @@ remix.30.1\n
   <string name="SpiderElite_Name_Objective">蜘蛛精英卫队</string>
   <string name="SpiderElite_Desc">就像军人一样，蜘蛛首位宣誓保卫它们的王国。蜘蛛精英的毒液是用来使它们的目标迷失方向的。</string>
   <string name="Shaman_ZapMiss">*地精的咒骂*</string>
-  <string name="Facilitations_Names_0">没有饥饿</string>
-  <string name="Facilitations_Names_1">巨魔之躯</string>
-  <string name="Facilitations_Names_2">魔精之灵</string>
-  <string name="Facilitations_Names_3">超强力量</string>
   <string name="Facilitations_Descriptions_0">作为突变个体，你总是会被蔑视或被他人所恐惧，但是此次征服地牢之旅中，不会感到饥饿将会再次给你带来优势。</string>
   <string name="Facilitations_Descriptions_1">没有人知道你的父母是谁，但堪比巨魔的再生能力将会修复接下来战斗中你所受到的伤。</string>
   <string name="Facilitations_Descriptions_2">通过对自然深入彻底的研究，你能够从环境中汲取能量，从而在旅途中不断补充你的魔力储备。</string>
