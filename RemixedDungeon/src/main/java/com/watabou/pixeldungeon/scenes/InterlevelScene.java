@@ -6,27 +6,25 @@ import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.utils.CharsList;
 import com.nyrds.pixeldungeon.utils.DungeonGenerator;
 import com.nyrds.pixeldungeon.utils.Position;
-import com.nyrds.pixeldungeon.windows.WndTilesKind;
 import com.nyrds.platform.EventCollector;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
+import com.nyrds.platform.storage.SaveUtils;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.Camera;
 import com.watabou.noosa.Text;
 import com.watabou.pixeldungeon.Dungeon;
-import com.watabou.pixeldungeon.SaveUtils;
 import com.watabou.pixeldungeon.actors.Actor;
 import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.actors.mobs.Mob;
 import com.watabou.pixeldungeon.levels.Level;
 import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.pixeldungeon.windows.WndError;
-import com.watabou.pixeldungeon.windows.WndStory;
 
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.Future;
 
 import lombok.SneakyThrows;
 
@@ -54,7 +52,7 @@ public class InterlevelScene extends PixelScene {
 
     private Text message;
 
-    private FutureTask<Boolean> levelChanger;
+    private Future<?> levelChanger;
 
     volatile private String error = null;
 
@@ -136,8 +134,7 @@ public class InterlevelScene extends PixelScene {
         phase = Phase.FADE_IN;
         timeLeft = TIME_TO_FADE;
 
-        levelChanger = new FutureTask<>(new LevelChanger(), true);
-        GameLoop.stepExecute(levelChanger);
+        levelChanger = GameLoop.stepExecute(new LevelChanger());
     }
 
     @Override
@@ -165,7 +162,7 @@ public class InterlevelScene extends PixelScene {
             case FADE_IN:
                 message.alpha(1 - p);
                 if ((timeLeft -= GameLoop.elapsed) <= 0) {
-                    if (error == null && levelChanger.isDone()) {
+                    if (error == null) {
                         phase = Phase.STATIC;
                         timeLeft = TIME_TO_FADE;
                     } else {
@@ -179,7 +176,7 @@ public class InterlevelScene extends PixelScene {
 
                 if (mode == Mode.CONTINUE
                         || (mode == Mode.DESCEND && Dungeon.depth == 1)) {
-                    Music.INSTANCE.volume(p);
+                    MusicManager.INSTANCE.volume(p);
                 }
                 if ((timeLeft -= GameLoop.elapsed) <= 0) {
                     GameLoop.switchScene(GameScene.class);
@@ -187,7 +184,7 @@ public class InterlevelScene extends PixelScene {
                 break;
 
             case STATIC:
-                if (script.runOptional("interlevel", true, mode.name(), levelChanger.isDone())) {
+                if (script.runOptional("interlevel", true, mode.name(), levelChanger.isDone()) && levelChanger.isDone()) {
                     phase = Phase.FADE_OUT;
                 }
                 break;

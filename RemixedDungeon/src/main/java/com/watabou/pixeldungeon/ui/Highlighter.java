@@ -1,12 +1,14 @@
 package com.watabou.pixeldungeon.ui;
 
-import androidx.annotation.NonNull;
+
 
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.Group;
 import com.watabou.noosa.Text;
 import com.watabou.pixeldungeon.scenes.PixelScene;
 import com.watabou.pixeldungeon.utils.Utils;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,9 +18,9 @@ public class Highlighter {
     private static final Pattern HIGHLIGHTER	= Pattern.compile( "_(.*?)_" );
     private static final Pattern STRIPPER		= Pattern.compile( "[ \n]" );
 
-    public String text;
+    public final String text;
 
-    public boolean[] mask;
+    public final boolean[] mask;
 
     public Highlighter(String text ) {
 
@@ -50,7 +52,7 @@ public class Highlighter {
         this.text = sb.toString();
     }
 
-    @NonNull
+    @NotNull
     public static Text addHilightedText(float x, float y, int maxWidth, Group parent, String message) {
         Highlighter hl = new Highlighter(message);
 
@@ -66,6 +68,7 @@ public class Highlighter {
 
         if (hl.isHighlighted()) {
             Text highlighted = PixelScene.createMultiline(hl.text, GuiProperties.regularFontSize());
+            highlighted.baseText = normal;
             highlighted.mask = hl.mask;
             highlighted.maxWidth(normal.getMaxWidth());
             highlighted.setX(normal.getX());

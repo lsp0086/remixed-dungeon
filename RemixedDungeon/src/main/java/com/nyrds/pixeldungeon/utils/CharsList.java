@@ -2,8 +2,6 @@ package com.nyrds.pixeldungeon.utils;
 
 
 import com.nyrds.LuaInterface;
-import com.nyrds.platform.util.TrackedRuntimeException;
-import com.nyrds.util.Util;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.DummyChar;
 import com.watabou.pixeldungeon.actors.DummyHero;
@@ -30,7 +28,7 @@ public class CharsList {
     private static final HashSet<Integer> destroyedChars = new HashSet<>();
     private static final String GRAVEYARD = "graveyard";
 
-    static public List<Mob> emptyMobList = Collections.unmodifiableList(new ArrayList<>());
+    static public final List<Mob> emptyMobList = Collections.unmodifiableList(new ArrayList<>());
 
     @LuaInterface
     @NotNull
@@ -45,9 +43,11 @@ public class CharsList {
     static public boolean add(Char mob, int id) {
         if(getCharsMap().containsKey(id)) {
             GLog.debug("%s is duplicate, %s already here with id %d", mob.getEntityKind(), getCharsMap().get(id).getEntityKind(), id);
+/*
             if(Util.isDebug() && mob instanceof Hero) {
                 throw new TrackedRuntimeException("dubbed Hero");
             }
+ */
             return false;
         }
         getCharsMap().put(id,mob);

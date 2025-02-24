@@ -15,7 +15,7 @@ public class EmoIcon extends Image {
 
 	private boolean growing = true;
 
-	protected CharSprite owner;
+	protected final CharSprite owner;
 
 	private EmoIcon(CharSprite owner) {
 		this.owner = owner;
@@ -39,11 +39,13 @@ public class EmoIcon extends Image {
 			if (growing) {
 				setScale( scale.x + elapsed * timeScale );
 				if (scale.x > maxSize) {
+					setScale( maxSize );
 					growing = false;
 				}
 			} else {
 				setScale( scale.x - elapsed * timeScale );
 				if (scale.x < 1) {
+					setScale( 1 );
 					growing = true;
 				}
 			}

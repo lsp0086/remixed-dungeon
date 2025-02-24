@@ -17,6 +17,7 @@ import com.nyrds.pixeldungeon.levels.cellCondition;
 import com.nyrds.pixeldungeon.levels.objects.LevelObject;
 import com.nyrds.pixeldungeon.levels.objects.LevelObjectsFactory;
 import com.nyrds.pixeldungeon.levels.objects.Presser;
+import com.nyrds.pixeldungeon.mechanics.HasPositionOnLevel;
 import com.nyrds.pixeldungeon.mechanics.actors.ScriptedActor;
 import com.nyrds.pixeldungeon.mechanics.buffs.BuffFactory;
 import com.nyrds.pixeldungeon.ml.R;
@@ -28,6 +29,7 @@ import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.platform.util.TrackedRuntimeException;
 import com.nyrds.util.ModError;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.ModdingMode;
 import com.nyrds.util.Util;
 import com.watabou.noosa.Scene;
@@ -39,10 +41,6 @@ import com.watabou.pixeldungeon.actors.Actor;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.RespawnerActor;
 import com.watabou.pixeldungeon.actors.blobs.Blob;
-import com.watabou.pixeldungeon.actors.buffs.Awareness;
-import com.watabou.pixeldungeon.actors.buffs.Blindness;
-import com.watabou.pixeldungeon.actors.buffs.MindVision;
-import com.watabou.pixeldungeon.actors.buffs.Shadows;
 import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.actors.hero.HeroClass;
 import com.watabou.pixeldungeon.actors.mobs.Bestiary;
@@ -203,6 +201,10 @@ public abstract class Level implements Bundlable {
 	@Nullable
 	@LuaInterface
 	public LevelObject getTopLevelObject(int pos) {
+		if(top_objects.containsKey(pos)) {
+			return top_objects.get(pos);
+		}
+
 		LevelObject top = null;
 
 		for (val objectLayer: objects.values()) {
@@ -215,6 +217,9 @@ public abstract class Level implements Bundlable {
 				}
 			}
 		}
+
+		top_objects.put(pos, top);
+
 		return top;
 	}
 
@@ -232,6 +237,7 @@ public abstract class Level implements Bundlable {
 
 		final int pos = lo.getPos();
 		objectsLayer.put(pos, lo);
+		top_objects.remove(pos);
 
 		if(lo.clearCells()) {
 			clearCellForObject(pos);
@@ -284,12 +290,12 @@ public abstract class Level implements Bundlable {
 			return levelId;
 		}
 
-		String music = DungeonGenerator.getLevelProperty(levelId, "music", ModdingMode.NO_FILE);
+		String music = DungeonGenerator.getLevelProperty(levelId, "music", ModdingBase.NO_FILE);
 		if(ModdingMode.isSoundExists(music)) {
 			return music;
 		}
 
-		music = DungeonGenerator.getLevelProperty(levelId, "fallbackMusic", ModdingMode.NO_FILE);
+		music = DungeonGenerator.getLevelProperty(levelId, "fallbackMusic", ModdingBase.NO_FILE);
 		if(ModdingMode.isSoundExists(music)) {
 			return music;
 		}
@@ -400,6 +406,8 @@ public abstract class Level implements Bundlable {
 				it.remove();
 			}
 		}
+
+		Dungeon.saveCurrentLevel(); //save level
 		return mobsToNextLevel;
 	}
 
@@ -411,6 +419,7 @@ public abstract class Level implements Bundlable {
 	protected int height = 32;
 
 	public static int[] NEIGHBOURS4;
+	public static int[] NEIGHBOURS5;
 	public static int[] NEIGHBOURS8;
 	public static int[] NEIGHBOURS9;
 	public static int[] NEIGHBOURS16;
@@ -459,7 +468,7 @@ public abstract class Level implements Bundlable {
 	private int compassTarget = INVALID_CELL;	// Where compass should point
 
 	@SuppressLint("UseSparseArrays")
-	protected HashMap<Integer, Integer> exitMap = new HashMap<>();
+	protected final HashMap<Integer, Integer> exitMap = new HashMap<>();
 
 	public String levelId;
 
@@ -467,9 +476,11 @@ public abstract class Level implements Bundlable {
 	public  Set<Mob>                              mobs    = new HashSet<>();
 	public  Map<Class<? extends Blob>, Blob>      blobs   = new HashMap<>();
 	private Map<Integer, Heap>                    heaps   = new HashMap<>();
-	public  Map<Integer,Map<Integer,LevelObject>> objects = new HashMap<>();
+	public final Map<Integer,Map<Integer,LevelObject>> objects = new HashMap<>();
 
-	protected ArrayList<Item> itemsToSpawn = new ArrayList<>();
+	public final Map<Integer, LevelObject> top_objects = new HashMap<>();
+
+	protected final ArrayList<Item> itemsToSpawn = new ArrayList<>();
 
 	public int color1 = 0x004400;
 	public int color2 = 0x88CC44;
@@ -528,9 +539,10 @@ public abstract class Level implements Bundlable {
 	}
 
 	protected void initSizeDependentStuff() {
-
+		GLog.debug("Level: initSizeDependentStuff: "+levelId);
 		Dungeon.initSizeDependentStuff(getWidth(), getHeight());
 		NEIGHBOURS4 = new int[]{-getWidth(), +1, +getWidth(), -1};
+		NEIGHBOURS5 = new int[]{0, -getWidth(), +1, +getWidth(), -1};
 		NEIGHBOURS8 = new int[]{+1, -1, +getWidth(), -getWidth(),
 				+1 + getWidth(), +1 - getWidth(), -1 + getWidth(),
 				-1 - getWidth()};
@@ -751,7 +763,7 @@ public abstract class Level implements Bundlable {
 		}
 
 		for (Blob blob : bundle.getCollection(BLOBS, Blob.class)) {
-			blobs.put(blob.getClass(), blob);
+			blobPut(blob.getClass(), blob);
 		}
 
 		for (ScriptedActor actor : bundle.getCollection(SCRIPTS, ScriptedActor.class)) {
@@ -817,7 +829,7 @@ public abstract class Level implements Bundlable {
 			return tilesTex();
 		}
 
-		if (ModdingMode.inMod() && !ModdingMode.isResourceExistInMod(tilesTexEx())
+		if (ModdingBase.inMod() && !ModdingMode.isResourceExistInMod(tilesTexEx())
 				&& ModdingMode.isResourceExistInMod(tilesTex())) {
 			return tilesTex();
 		}
@@ -909,14 +921,14 @@ public abstract class Level implements Bundlable {
 			Actor.addDelayed(new Pushing(mob, fromCell, targetPos), -1);
 		}
 
-		if (GameScene.isSceneReady()) {
-			mob.setPos(fromCell);
-			mob.updateSprite();
-		}
+		mob.setPos(fromCell);
 
-		mob.setPos(targetPos);
 		Actor.addDelayed(mob, delay);
 		Actor.occupyCell(mob);
+
+		if (GameScene.isSceneReady()) {
+			mob.updateSprite();
+		}
 
 		if (GameScene.isSceneReady()) {
 			mob.onSpawn(this);
@@ -1134,7 +1146,7 @@ public abstract class Level implements Bundlable {
 	public void set(int cell, int terrain) {
 
 		if(!cellValid(cell)) {
-			EventCollector.logEvent(Utils.format("Attempt set invalid cell %d on %s to %d", cell, levelId, terrain));
+			EventCollector.logException(Utils.format("Attempt set invalid cell %d on %s to %d", cell, levelId, terrain));
 			return;
 		}
 
@@ -1323,7 +1335,7 @@ public abstract class Level implements Bundlable {
 				avoid[levelObjectPos] = false;
 			}
 		}
-
+		top_objects.remove(levelObjectPos);
 		return objectsLayer.values().remove(levelObject);
 	}
 
@@ -1547,6 +1559,10 @@ public abstract class Level implements Bundlable {
 		int bx = cellX(b);
 		int by = cellY(b);
 		return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+	}
+
+	public float distanceL2(HasPositionOnLevel oa, HasPositionOnLevel ob) {
+		return distanceL2(oa.getPos(), ob.getPos());
 	}
 
 	public float distanceL2(int a, int b) {
@@ -1911,7 +1927,7 @@ public abstract class Level implements Bundlable {
 				}
 			}
 		}
-		blobs.put(blobClass, blob);
+		blobPut(blobClass, blob);
 	}
 
 	public void clearAreaFrom(Class<? extends Blob> blobClass, int cell, int xs, int ys) {
@@ -2052,8 +2068,11 @@ public abstract class Level implements Bundlable {
 	public int getNearestVisibleLevelObject(int cell) {
 		return getNearestTerrain(cell,
 				(level, cell1) -> {
+					if(!level.fieldOfView[cell1]) {
+						return false;
+					}
 					LevelObject lo = level.getTopLevelObject(cell);
-					return level.fieldOfView[cell1] && (lo!=null && lo.secret());
+					return (lo!=null && lo.secret());
 				});
 	}
 
@@ -2121,5 +2140,10 @@ public abstract class Level implements Bundlable {
 			}
 		}
 		return false;
+	}
+
+	public void blobPut(Class<? extends Blob> clazz, Blob blob) {
+		Actor.add(blob);
+		blobs.put(clazz, blob);
 	}
 }

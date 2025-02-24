@@ -37,7 +37,7 @@ public class Visual extends Gizmo implements IPlaceable{
 
 	public boolean dirtyMatrix;
 	
-	protected float[] matrix;
+	public final float[] matrix;
 	
 	public float rm;
 	public float gm;
@@ -48,8 +48,8 @@ public class Visual extends Gizmo implements IPlaceable{
 	public float ba;
 	public float aa;
 	
-	public PointF speed;
-	public PointF acc;
+	public final PointF speed;
+	public final PointF acc;
 	
 	public float angle;
 	public float angularSpeed;
@@ -79,6 +79,7 @@ public class Visual extends Gizmo implements IPlaceable{
 	
 	@Override
 	public void draw() {
+		//PUtil.slog("visual", "drawing " + this);
 		updateMatrix();
 	}
 	
@@ -114,11 +115,6 @@ public class Visual extends Gizmo implements IPlaceable{
 		setY(p.y);
 		return p;
 	}
-	
-//	public PointF center() {
-//		return new PointF( x + width / 2 + visualOffsetX(), y + height / 2 + visualOffsetY());
-//	}
-
 
 	public PointF center() {
 		return new PointF( getX() + width / 2, getY() + height / 2);
@@ -274,6 +270,11 @@ public class Visual extends Gizmo implements IPlaceable{
 	@Override
 	public float getY() {
 		return y;
+	}
+
+	@Override
+	public IPlaceable shadowOf() {
+		return null;
 	}
 
 	public void Scale(PointF scale) {

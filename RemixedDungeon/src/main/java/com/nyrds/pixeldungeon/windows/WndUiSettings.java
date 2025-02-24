@@ -4,7 +4,6 @@ package com.nyrds.pixeldungeon.windows;
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.pixeldungeon.ml.R;
-import com.nyrds.platform.game.Game;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.util.StringsManager;
 import com.watabou.pixeldungeon.utils.Utils;
@@ -16,8 +15,8 @@ public class WndUiSettings extends WndMenuCommon {
 	@Override
 	protected void createItems() {
 
-		if (android.os.Build.VERSION.SDK_INT >= 19) {
-            menuItems.add( new MenuCheckBox(R.string.WndSettings_Immersive, GamePreferences.immersed()) {
+		if(Utils.isAndroid()) {
+			menuItems.add(new MenuCheckBox(R.string.WndSettings_Immersive, GamePreferences.immersed()) {
 				@Override
 				protected void onClick() {
 					super.onClick();
@@ -25,17 +24,17 @@ public class WndUiSettings extends WndMenuCommon {
 				}
 			});
 		}
-
 		if(!GamePreferences.classicFont()){
 			menuItems.add(createTextScaleButtons());
 		}
-
-		menuItems.add(new MenuButton(orientationText()) {
-			@Override
-			protected void onClick() {
-				RemixedDungeon.landscape(!RemixedDungeon.landscape());
-			}
-		});
+		if(Utils.isAndroid()) {
+			menuItems.add(new MenuButton(orientationText()) {
+				@Override
+				protected void onClick() {
+					RemixedDungeon.landscape(!RemixedDungeon.landscape());
+				}
+			});
+		}
 
         final String[] texts = {StringsManager.getVar(R.string.WndSettings_ExperementalFont),
                 StringsManager.getVar(R.string.WndSettings_ClassicFont)

@@ -6,7 +6,6 @@ import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.util.StringsManager;
 import com.watabou.pixeldungeon.Assets;
 import com.watabou.pixeldungeon.actors.Char;
-import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.effects.particles.PurpleParticle;
 import com.watabou.pixeldungeon.items.armor.Armor;
 import com.watabou.pixeldungeon.items.scrolls.BlankScroll;
@@ -104,7 +103,7 @@ public class Stylus extends Item {
 		
 		Scroll inscribedScroll = Scroll.createRandomScroll();
 		getOwner().collect(inscribedScroll);
-		GLog.i(Hero.getHeroYouNowHave(), inscribedScroll.name());	// Let know which scroll was inscribed
+		getOwner().itemPickedUp(inscribedScroll);
 
 		inscribeEffect();
 	}

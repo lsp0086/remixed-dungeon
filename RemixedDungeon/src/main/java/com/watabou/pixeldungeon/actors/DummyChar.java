@@ -15,13 +15,16 @@ import java.util.HashSet;
 
 public class DummyChar extends Char {
 
+    {
+        deactivateActor();
+    }
     public DummyChar() {
         super();
     }
 
     @Override
     protected float _attackDelay() {
-        return 1f;
+        return super._attackDelay();
     }
 
     @Override
@@ -36,6 +39,9 @@ public class DummyChar extends Char {
 
     @Override
     public boolean getCloser(int cell) {
+        return false;
+    }
+    public boolean getCloser(int cell, boolean ignorePets) {
         return false;
     }
 
@@ -118,5 +124,10 @@ public class DummyChar extends Char {
     }
     @Override
     public void setCurAction(CharAction curAction) {
+    }
+
+    @Override
+    public String getEntityKind() {
+        return "DummyChar";
     }
 }

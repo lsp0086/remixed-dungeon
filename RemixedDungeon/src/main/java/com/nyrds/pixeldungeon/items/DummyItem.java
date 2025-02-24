@@ -7,6 +7,9 @@ import com.watabou.pixeldungeon.items.EquipableItem;
 import org.jetbrains.annotations.NotNull;
 
 public class DummyItem extends EquipableItem {
+    {
+        deactivateActor();
+    }
     @Override
     public Belongings.Slot slot(Belongings belongings) {
         return Belongings.Slot.NONE;
@@ -42,7 +45,7 @@ public class DummyItem extends EquipableItem {
 
     @Override
     public int requiredSTR() {
-        return 0;
+        return super.requiredSTR();
     }
 
     @Override
@@ -57,5 +60,15 @@ public class DummyItem extends EquipableItem {
 
     @Override
     public void activate(@NotNull Char ch) {
+    }
+
+    @Override
+    public String getEntityKind() {
+        return "DummyItem";
+    }
+
+    @Override
+    public boolean doPickUp(@NotNull Char hero) {
+        return false;
     }
 }

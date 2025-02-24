@@ -2,6 +2,7 @@
 package com.watabou.pixeldungeon.actors.mobs;
 
 import com.nyrds.LuaInterface;
+import com.nyrds.Packable;
 import com.nyrds.generated.BundleHelper;
 import com.nyrds.pixeldungeon.ai.AiState;
 import com.nyrds.pixeldungeon.ai.Horrified;
@@ -11,11 +12,10 @@ import com.nyrds.pixeldungeon.ai.RunningAmok;
 import com.nyrds.pixeldungeon.ai.Sleeping;
 import com.nyrds.pixeldungeon.ai.Wandering;
 import com.nyrds.pixeldungeon.game.ModQuirks;
+import com.nyrds.pixeldungeon.items.Carcass;
 import com.nyrds.pixeldungeon.items.Treasury;
 import com.nyrds.pixeldungeon.items.common.ItemFactory;
 import com.nyrds.pixeldungeon.items.common.Library;
-import com.nyrds.pixeldungeon.items.common.armor.NecromancerRobe;
-import com.nyrds.pixeldungeon.items.necropolis.BlackSkull;
 import com.nyrds.pixeldungeon.mechanics.NamedEntityKind;
 import com.nyrds.pixeldungeon.mechanics.buffs.BuffFactory;
 import com.nyrds.pixeldungeon.ml.R;
@@ -26,8 +26,8 @@ import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.platform.util.TrackedRuntimeException;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.ModdingMode;
-import com.nyrds.util.Util;
 import com.watabou.pixeldungeon.Badges;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.Statistics;
@@ -45,7 +45,6 @@ import com.watabou.pixeldungeon.effects.Flare;
 import com.watabou.pixeldungeon.effects.Pushing;
 import com.watabou.pixeldungeon.items.Item;
 import com.watabou.pixeldungeon.levels.features.Chasm;
-import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.scenes.InterlevelScene;
 import com.watabou.pixeldungeon.sprites.CharSprite;
 import com.watabou.pixeldungeon.sprites.MobSpriteDef;
@@ -55,7 +54,6 @@ import com.watabou.utils.Random;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import lombok.SneakyThrows;
@@ -69,8 +67,11 @@ public abstract class Mob extends Char {
 
     protected Object spriteClass;
 
+    @Packable(defaultValue = "1")
     protected int expForKill = 1;
+
     protected int maxLvl = 50;
+    protected float carcassChance = ModdingBase.inMod() ? ModQuirks.defaultCarcassChance : 0.5f;
 
     public static final float TIME_TO_WAKE_UP = 1f;
 
@@ -78,7 +79,7 @@ public abstract class Mob extends Char {
     private static final String FRACTION = "fraction";
     protected int dmgMin = 0;
     protected int dmgMax = 0;
-    protected int attackSkill = 0;
+    protected final int attackSkill = 0;
     protected int dr = 0;
     protected boolean isBoss = false;
 
@@ -86,8 +87,8 @@ public abstract class Mob extends Char {
         super();
         setupCharData();
         getScript().run("fillStats");
-        if(ModQuirks.mobLeveling) {
-            lvl(Random.NormalIntRange(1, (int) (2 * RemixedDungeon.getDifficultyFactor() + 1)));
+        if (ModQuirks.mobLeveling) {
+            lvl(Random.Int(1, (int) RemixedDungeon.getDifficultyFactor() + 1));
         }
     }
 
@@ -110,8 +111,13 @@ public abstract class Mob extends Char {
 
     @NotNull
     public static Mob makePet(@NotNull Mob pet, int ownerId) {
+        var owner = CharsList.getById(ownerId);
+        if(owner.fraction()==Fraction.HEROES) {
+            pet.expForKill = 0;
+        }
         if (pet.canBePet()) {
-            pet.setFraction(Fraction.HEROES);
+
+            pet.setFraction(owner.fraction());
             pet.setOwnerId(ownerId);
         }
         return pet;
@@ -161,10 +167,6 @@ public abstract class Mob extends Char {
 
     @SneakyThrows
     public CharSprite newSprite() {
-        String descName = "spritesDesc/" + getEntityKind() + ".json";
-        if (ModdingMode.isResourceExist(descName) || ModdingMode.isAssetExist(descName)) {
-            return new MobSpriteDef(descName, getKind());
-        }
 
         if (spriteClass instanceof Class) {
             CharSprite sprite = (CharSprite) ((Class<?>) spriteClass).newInstance();
@@ -176,18 +178,16 @@ public abstract class Mob extends Char {
             return new MobSpriteDef((String) spriteClass, getKind());
         }
 
-        throw new TrackedRuntimeException(String.format("sprite creation failed - me class %s", getEntityKind()));
+        String descName = "spritesDesc/" + getEntityKind() + ".json";
+        if (ModdingMode.isResourceExist(descName) || ModdingMode.isAssetExist(descName)) {
+            return new MobSpriteDef(descName, getKind());
+        }
+
+        throw new TrackedRuntimeException(String.format("sprite creation failed - me class %s sprite class %s", getEntityKind(), spriteClass));
     }
 
     @Override
     public boolean act() {
-/*
-    	if(Util.isDebug() && !(this instanceof NPC) && !getEntityKind().contains("NPC") && !getEntityKind().contains("Npc")) {
-    		if(!(baseAttackSkill > 0 && baseDefenseSkill > 0)) {
-    			throw new RuntimeException(Utils.format("bad params for %s", getEntityKind()));
-			}
-		}
-*/
         super.act(); //Calculate FoV
 
         getSprite().hideAlert();
@@ -198,21 +198,34 @@ public abstract class Mob extends Char {
             return true;
         }
 
-        //float timeBeforeAct = actorTime();
+        float timeBeforeAct = actorTime();
+        StringBuilder tags = new StringBuilder();
+
+        String aiTag = getState().getTag();
+
+        tags.append(aiTag);
+
+        int tryCount = 5;
+        for (int i = 0;i < tryCount;i++) {
+            GLog.debug("%s is %s", getEntityKind(), getState().getTag());
+            getState().act(this);
+            if(actorTime() != timeBeforeAct) {
+                return true;
+            }
+            String newTag = getState().getTag();
+            if(aiTag.equals(newTag)) { //mob decided to do nothing, this is ok
+                spend(TICK);
+                return true;
+            }
+            aiTag = newTag;
+            tags.append(aiTag);
+        }
 
 
-        //GLog.debug("%s is %s", getEntityKind(), getState().getTag());
-        getState().act(this);
+        var error = String.format("actor %s get really confused!", getEntityKind(), tags);
+        spend(TICK);
+        EventCollector.logException(error);
 
-/*		if(actorTime() == timeBeforeAct && Util.isDebug()) {
-			var error = String.format("actor %s has same timestamp after %s act!", getEntityKind(), getState().getTag());
-			if(Util.isDebug()) {
-				throw new ModError(error);
-			} else {
-				spend(MICRO_TICK);
-				EventCollector.logException(error);
-			}
-		}*/
         return true;
     }
 
@@ -231,7 +244,7 @@ public abstract class Mob extends Char {
     public boolean add(Buff buff) {
         super.add(buff);
 
-        if (!GameScene.isSceneReady()) {
+        if (!isOnStage()) {
             return true;
         }
 
@@ -252,7 +265,7 @@ public abstract class Mob extends Char {
         return !pacified && super.canAttack(enemy);
     }
 
-    public boolean getCloser(int target) {
+    public boolean getCloser(int target, boolean ignorePets) {
         int step = Dungeon.findPath(this, target, walkingType.passableCells(level()));
         return _doStep(step);
     }
@@ -273,7 +286,10 @@ public abstract class Mob extends Char {
 
     @Override
     public final void onZapComplete() {
-        zap(getEnemy());
+        Char enemy = getEnemy();
+        if(enemy.valid()) {
+            zap(enemy);
+        }
         super.onZapComplete();
     }
 
@@ -285,12 +301,8 @@ public abstract class Mob extends Char {
 
     @Override
     public void destroy() {
-
-        spend(MICRO_TICK);
-
-        super.destroy();
-
         level().mobs.remove(this);
+        super.destroy();
     }
 
     public void remove() {
@@ -298,29 +310,12 @@ public abstract class Mob extends Char {
     }
 
     public void die(@NotNull NamedEntityKind cause) {
-
-        spend(Actor.MICRO_TICK);
-
-
         Badges.validateRare(this);
 
         Hero hero = Dungeon.hero;
 
         if (!cause.getEntityKind().equals(Chasm.class.getSimpleName())) {
-            //TODO we should move this block out of Mob class ( in script for example )
-            if (hero.getHeroClass() == HeroClass.NECROMANCER) {
-                if (hero.isAlive()) {
-                    if (hero.getItemFromSlot(Belongings.Slot.ARMOR) instanceof NecromancerRobe) {
-                        hero.accumulateSkillPoints();
-                    }
-                }
-            }
-
-            for (Item item : hero.getBelongings()) {
-                if (item instanceof BlackSkull && item.isEquipped(hero)) {
-                    ((BlackSkull) item).mobDied(this, hero);
-                }
-            }
+            hero.getBelongings().forEachEquipped(item -> item.charDied(this, hero));
         }
 
         if (hero.isAlive()) {
@@ -349,6 +344,13 @@ public abstract class Mob extends Char {
         Library.identify(Library.MOB, getEntityKind());
 
         if (!(cause instanceof Chasm)) {
+            if (Random.Float(1) <= carcassChance) {
+                Item carcass = carcass();
+                if (carcass.valid()) {
+                    level().drop(carcass, getPos());
+                }
+            }
+
             getBelongings().dropAll();
         }
 
@@ -385,6 +387,7 @@ public abstract class Mob extends Char {
         }
     }
 
+    @Override
     public void resurrect(Char parent) {
 
         int spawnPos = getPos();
@@ -409,7 +412,8 @@ public abstract class Mob extends Char {
         setTarget(cell);
     }
 
-    public void fromJson(JSONObject mobDesc) throws JSONException, InstantiationException, IllegalAccessException {
+    @SneakyThrows
+    public void fromJson(JSONObject mobDesc) {
         Bundle descBundle = new Bundle();
         BundleHelper.Pack(this, descBundle);
         descBundle.mergeWith(mobDesc);
@@ -440,6 +444,16 @@ public abstract class Mob extends Char {
 
     @Override
     public boolean friendly(@NotNull Char chr) {
+        return friendly(chr, 0);
+    }
+
+    @Override
+    public boolean friendly(@NotNull Char chr, int r_level) {
+
+        if (r_level > 7) {
+            EventCollector.logException("too high r_level in Mob::friendly");
+            return false;
+        }
 
         if (chr == this) {
             return true;
@@ -449,7 +463,7 @@ public abstract class Mob extends Char {
             return false;
         }
 
-        if (getOwnerId() == chr.getId()) {
+        if (getOwnerId() == chr.getId() || getId() == chr.getId()) {
             return true;
         }
 
@@ -457,15 +471,19 @@ public abstract class Mob extends Char {
             return false;
         }
 
-        if (getOwnerId() != getId() && getOwner().friendly(chr)) {
-            return true;
+        if (getOwnerId() != getId()) {
+            if (getOwner().friendly(chr, r_level + 1)) {
+                return true;
+            }
         }
 
         if (chr instanceof Hero) {
-            return chr.getHeroClass().friendlyTo(getEntityKind());
+            if(chr.getHeroClass().friendlyTo(getEntityKind())) {
+                return true;
+            }
         }
 
-        return !this.fraction.isEnemy(chr.fraction);
+        return super.friendly(chr, r_level);
     }
 
     @Override
@@ -525,7 +543,20 @@ public abstract class Mob extends Char {
 
     @Override
     public Char makeClone() {
-        return MobFactory.mobByName(getEntityKind());
+
+        Bundle storedMob = new Bundle();
+        storeInBundle(storedMob);
+        Mob new_mob = MobFactory.mobByName(getEntityKind());
+        new_mob.restoreFromBundle(storedMob);
+        new_mob.getId(); //Ensure valid id
+
+        if (getOwnerId() == getId()) {
+            new_mob.setOwnerId(new_mob.getId());
+        } else {
+            new_mob.setOwnerId(getOwnerId());
+        }
+
+        return new_mob;
     }
 
     public void loot(Object loot, float lootChance) {
@@ -550,20 +581,23 @@ public abstract class Mob extends Char {
     }
 
     @Override
-    @LuaInterface
-    public void lvl(int lvl) {
-        super.lvl(lvl);
+    public void earnExp(int exp) {
+        int old_lvl = lvl();
+        super.earnExp(exp);
         if (!Dungeon.isLoading()) {
-            if (lvl >= 5) {
-                if (!hasBuff("ChampionOfEarth") && !hasBuff("ChampionOfFire")
-                        && !hasBuff("ChampionOfWater") && !hasBuff("ChampionOfAir")) {
+            if (level().cellValid(getPos())) {
+                if (lvl() >= 5 && lvl() != old_lvl) {
+                    if (!hasBuff(BuffFactory.CHAMPION_OF_EARTH) && !hasBuff(BuffFactory.CHAMPION_OF_FIRE)
+                            && !hasBuff(BuffFactory.CHAMPION_OF_WATER) && !hasBuff(BuffFactory.CHAMPION_OF_AIR)) {
 
-                    String [] champions = {"ChampionOfEarth", "ChampionOfFire", "ChampionOfWater", "ChampionOfAir"};
+                        String[] champions = {BuffFactory.CHAMPION_OF_EARTH, BuffFactory.CHAMPION_OF_FIRE, BuffFactory.CHAMPION_OF_WATER, BuffFactory.CHAMPION_OF_AIR};
 
-                    Buff.permanent(this, Random.oneOf(champions));
+                        Buff.permanent(this, Random.oneOf(champions));
+                    }
                 }
             }
         }
+
     }
 
     @Override
@@ -582,5 +616,13 @@ public abstract class Mob extends Char {
     @Override
     public int dr() {
         return getItemFromSlot(Belongings.Slot.ARMOR).effectiveDr() + dr + lvl() / 2;
+    }
+
+    @Override
+    public Item carcass() {
+        return new Carcass(this);
+    }
+
+    public void adjustStats(int depth) {
     }
 }

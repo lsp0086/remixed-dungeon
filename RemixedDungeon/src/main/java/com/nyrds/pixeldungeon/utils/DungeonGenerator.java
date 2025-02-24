@@ -16,10 +16,12 @@ import com.nyrds.pixeldungeon.spiders.levels.SpiderLevel;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.util.JsonHelper;
 import com.nyrds.util.ModError;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.ModdingMode;
 import com.nyrds.util.Util;
 import com.watabou.pixeldungeon.Challenges;
 import com.watabou.pixeldungeon.Dungeon;
+import com.watabou.pixeldungeon.actors.Actor;
 import com.watabou.pixeldungeon.levels.CavesBossLevel;
 import com.watabou.pixeldungeon.levels.CavesLevel;
 import com.watabou.pixeldungeon.levels.CityBossLevel;
@@ -88,20 +90,20 @@ public class DungeonGenerator {
 	}
 
 	private static void initLevelsMap() {
-		if (Util.isDebug() && !ModdingMode.inMod()) {
+		if (Util.isDebug() && !ModdingBase.inMod()) {
 			mDungeonMap = JsonHelper.readJsonFromAsset("levelsDesc/Dungeon_debug.json");
 		} else {
 			mDungeonMap = JsonHelper.readJsonFromAsset("levelsDesc/Dungeon.json");
 		}
 
-		if (Dungeon.isChallenged(Challenges.NO_TOWN) && !ModdingMode.inMod()) {
+		if (Dungeon.isChallenged(Challenges.NO_TOWN) && !ModdingBase.inMod()) {
 			mDungeonMap = JsonHelper.readJsonFromAsset("levelsDesc/Dungeon_no_town.json");
 		}
 
 		try {
 			mLevels = mDungeonMap.getJSONObject("Levels");
 			mGraph = mDungeonMap.getJSONObject("Graph");
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			throw ModdingMode.modException("bad Dungeon.json",e);
 		}
 
@@ -142,7 +144,7 @@ public class DungeonGenerator {
 	public static String getEntryLevel() {
 		try {
 			return mDungeonMap.getString("Entrance");
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			throw ModdingMode.modException("bad Dungeon.json",e);
 		}
 	}
@@ -150,7 +152,7 @@ public class DungeonGenerator {
 	public static int exitCount(String levelId) {
 		try {
 			return mGraph.getJSONArray(levelId).getJSONArray(0).length();
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			throw ModdingMode.modException("bad Dungeon.json",e);
 		}
 	}
@@ -231,7 +233,7 @@ public class DungeonGenerator {
 			mCurrentLevelKind  = getLevelKind(next.levelId);
 
 			return next;
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			throw ModdingMode.modException("bad Dungeon.json",e);
 		}
 	}
@@ -241,7 +243,7 @@ public class DungeonGenerator {
 		try {
 			JSONObject levelDesc = mLevels.getJSONObject(id);
 			JsonHelper.readStringSet(levelDesc,property,ret);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			//default value is ok
 		}
 
@@ -253,7 +255,7 @@ public class DungeonGenerator {
 			JSONObject levelDesc = mLevels.getJSONObject(id);
 			return levelDesc.optString(property,defaultValue);
 
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			//default value is ok
 		}
 		return defaultValue;
@@ -264,7 +266,7 @@ public class DungeonGenerator {
 		try {
 			JSONObject levelDesc = mLevels.getJSONObject(id);
 			return (float) levelDesc.optDouble(property, defaultValue);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			//default value is ok
 		}
 		return defaultValue;
@@ -275,7 +277,7 @@ public class DungeonGenerator {
 		try {
 			JSONObject levelDesc = mLevels.getJSONObject(id);
 			return levelDesc.optBoolean(property, defaultValue);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			//default value is ok
 		}
 		return defaultValue;
@@ -336,6 +338,7 @@ public class DungeonGenerator {
 	@NotNull
 	@SneakyThrows
 	public static Level createLevel(@NotNull Position pos) {
+		Actor.clearActors();
 		String newLevelKind = getLevelKind(pos.levelId);
 		Class<? extends Level> levelClass = mLevelKindList.get(newLevelKind);
 
@@ -387,6 +390,7 @@ public class DungeonGenerator {
 		return !getLevelKind(id).equals(DEAD_END_LEVEL);
 	}
 
+	@LuaInterface
 	@NotNull
 	public static String getLevelKind(String id) {
 		return getLevelProperty(id,"kind",DEAD_END_LEVEL);

@@ -3,7 +3,8 @@ package com.watabou.pixeldungeon.scenes;
 
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.ml.R;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
+import com.nyrds.platform.gl.NoosaScript;
 import com.nyrds.platform.input.Touchscreen.Touch;
 import com.watabou.gltextures.Gradient;
 import com.watabou.gltextures.SmartTexture;
@@ -16,7 +17,6 @@ import com.watabou.noosa.ColorBlock;
 import com.watabou.noosa.Group;
 import com.watabou.noosa.Image;
 import com.watabou.noosa.MovieClip;
-import com.watabou.noosa.NoosaScript;
 import com.watabou.noosa.TextureFilm;
 import com.watabou.noosa.TouchArea;
 import com.watabou.noosa.Visual;
@@ -45,8 +45,7 @@ public class SurfaceScene extends PixelScene {
 		
 		super.create();
 		
-		Music.INSTANCE.play( Assets.HAPPY, true );
-		Music.INSTANCE.volume( 1f );
+		MusicManager.INSTANCE.play( Assets.HAPPY, true );
 		
 		uiCamera.setVisible(false);
 		
@@ -284,19 +283,19 @@ public class SurfaceScene extends PixelScene {
 		
 		public Avatar( HeroClass cl ) {
 			super( Assets.AVATARS );
-			frame( new TextureFilm( texture, WIDTH, HEIGHT ).get( cl.classIndex()) );
+			frame( TextureCache.getFilm( texture, WIDTH, HEIGHT ).get( cl.classIndex()) );
 		}
 	}
 	
 	private static class Pet extends MovieClip implements MovieClip.Listener {
 
-		private Animation idle;
-		private Animation jump;
+		private final Animation idle;
+		private final Animation jump;
 
 		public Pet() {
 			super(Assets.PET);
 
-			TextureFilm frames = new TextureFilm(texture, 16, 16);
+			TextureFilm frames = TextureCache.getFilm(texture, 16, 16);
 
 			idle = new Animation(2, true);
 			idle.frames(frames, 0, 0, 0, 0, 0, 0, 1);
@@ -326,13 +325,13 @@ public class SurfaceScene extends PixelScene {
 		public static final int WIDTH  = 16;
 		public static final int HEIGHT = 14;
 
-		private float tx;
-		private float ty;
+		private final float tx;
+		private final float ty;
 
 		private double a = Random.Float(5);
 		private double angle;
 
-		private boolean forward;
+		private final boolean forward;
 
 		public GrassPatch(float tx, float ty, boolean forward) {
 

@@ -1,25 +1,26 @@
 
 package com.watabou.pixeldungeon.scenes;
 
-import android.content.Intent;
-
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.platform.game.Game;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.input.Touchscreen.Touch;
+import com.nyrds.platform.storage.AndroidSAF;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.Camera;
-import com.watabou.noosa.Gizmo;
 import com.watabou.noosa.Image;
 import com.watabou.noosa.Scene;
 import com.watabou.noosa.Text;
 import com.watabou.noosa.TouchArea;
 import com.watabou.pixeldungeon.effects.Flare;
+import com.watabou.pixeldungeon.items.ArmorKit;
+import com.watabou.pixeldungeon.sprites.ItemSprite;
 import com.watabou.pixeldungeon.ui.Archs;
 import com.watabou.pixeldungeon.ui.ExitButton;
 import com.watabou.pixeldungeon.ui.Icons;
 import com.watabou.pixeldungeon.ui.Window;
+import com.watabou.pixeldungeon.utils.Utils;
 
 public class AboutScene extends PixelScene {
 
@@ -34,7 +35,7 @@ public class AboutScene extends PixelScene {
 	}
 
 	private static String getTRN() {
-        return StringsManager.getVar(R.string.AboutScene_Translation) + "\n\t" + StringsManager.getVar(R.string.AboutScene_Translation_Names);
+        return StringsManager.getVar(R.string.AboutScene_Translation) + "\n" + StringsManager.getVar(R.string.AboutScene_Translation_Names);
 	}
 
 	private Text createTouchEmail(final String address, Text text2)
@@ -45,19 +46,14 @@ public class AboutScene extends PixelScene {
 		TouchArea area = new TouchArea( text ) {
 			@Override
 			protected void onClick( Touch touch ) {
-				Intent intent = new Intent( Intent.ACTION_SEND);
-				intent.setType("message/rfc822");
-				intent.putExtra(Intent.EXTRA_EMAIL, new String[]{address} );
-                intent.putExtra(Intent.EXTRA_SUBJECT, StringsManager.getVar(R.string.app_name));
-
-                Game.instance().startActivity( Intent.createChooser(intent, StringsManager.getVar(R.string.AboutScene_Snd)) );
+				Game.sendEmail(address, StringsManager.getVar(R.string.app_name));
 			}
 		};
 		add(area);
 		return text;
 	}
 	
-	private Text createTouchLink(final String address, Text visit)
+	private Text createTouchLink(final int desc_res, final String address, Text visit)
 	{
 		Text text = createText(address, visit);
 		text.hardlight( Window.TITLE_COLOR );
@@ -65,7 +61,7 @@ public class AboutScene extends PixelScene {
 		TouchArea area = new TouchArea( text ) {
 			@Override
 			protected void onClick( Touch touch ) {
-                Game.instance().openUrl(StringsManager.getVar(R.string.AboutScene_OurSite), address);
+                Game.openUrl(StringsManager.getVar(desc_res), address);
 			}
 		};
 		add(area);
@@ -75,7 +71,7 @@ public class AboutScene extends PixelScene {
 	private void placeBellow(Text elem, Text upper)
 	{
 		elem.setX(upper.getX());
-		elem.setY(upper.getY() + upper.height());
+		elem.setY(upper.getY() + upper.height() + 1);
 	}
 
 	private Text createText(String text, Text upper)
@@ -95,8 +91,6 @@ public class AboutScene extends PixelScene {
 
 		Text text = createText(getTXT(), null );
 		
-		text.camera = uiCamera;
-		
 		text.setX(align( (Camera.main.width - text.width()) / 2 ));
 		text.setY(align( (Camera.main.height - text.height()) / 3 ));
 
@@ -104,9 +98,11 @@ public class AboutScene extends PixelScene {
         Text email = createTouchEmail(StringsManager.getVar(R.string.AboutScene_Mail), text);
 
         Text visit = createText(StringsManager.getVar(R.string.AboutScene_OurSite), email);
-        Text site  = createTouchLink(StringsManager.getVar(R.string.AboutScene_Lnk), visit);
+        Text site  = createTouchLink(R.string.AboutScene_OurSite, StringsManager.getVar(R.string.AboutScene_Lnk), visit);
 		
-		createText("\n"+ getTRN(), site);
+		Text trn = createText(getTRN(), site);
+		Text getCode = createText(StringsManager.getVar(R.string.AboutScene_SourceCode), trn);
+		Text code = createTouchLink(R.string.AboutScene_SourceCode, "https://github.com/NYRDS/remixed-dungeon", getCode);
 		
 		Image nyrdie = Icons.NYRDIE.get();
 		nyrdie.setX(align( text.getX() + (text.width() - nyrdie.width) / 2 ));
@@ -143,7 +139,22 @@ public class AboutScene extends PixelScene {
 		add(area);
 
 		new Flare( 7, 64 ).color( 0x332211, true ).show( nyrdie, 0 ).angularSpeed = -20;
-		
+
+		if(Utils.isAndroid()) {
+			ItemSprite sprite = new ItemSprite(new ArmorKit());
+			sprite.alpha(0.1f);
+			sprite.setX(align(text.getX() + (text.width() - sprite.width()) / 2));
+			sprite.setY(nyrdie.getY() - sprite.height() - 8);
+			add(sprite);
+
+			TouchArea area2 = new TouchArea(sprite) {
+				@Override
+				protected void onClick(Touch touch) {
+					Game.toast("Entering dev mode, pick directory");
+					AndroidSAF.pickDirectoryForModInstall();
+				}
+			};
+		}
 		Archs archs = new Archs();
 		archs.setSize( Camera.main.width, Camera.main.height );
         sendToBack(archs);

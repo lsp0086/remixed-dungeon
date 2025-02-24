@@ -1,7 +1,5 @@
 package com.nyrds.pixeldungeon.mobs.common;
 
-import com.nyrds.pixeldungeon.ai.MobAi;
-import com.nyrds.pixeldungeon.ai.Passive;
 import com.nyrds.pixeldungeon.items.ItemUtils;
 import com.nyrds.pixeldungeon.items.Treasury;
 import com.nyrds.pixeldungeon.utils.ItemsList;
@@ -35,14 +33,14 @@ public class ArmoredStatue extends Statue {
 	}
 
 	@Override
-	public void beckon( int cell ) {
-	}
+	public void beckon(int cell ) {
+        super.beckon(cell);
+    }
 
 	@Override
 	public boolean reset() {
-		setState(MobAi.getStateByClass(Passive.class));
-		return true;
-	}
+        return super.reset();
+    }
 
 
 	@NotNull

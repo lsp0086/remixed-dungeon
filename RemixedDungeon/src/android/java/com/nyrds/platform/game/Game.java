@@ -1,22 +1,6 @@
-/*
- * Copyright (C) 2012-2014  Oleg Dolya
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>
- */
-
 package com.nyrds.platform.game;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -34,6 +18,7 @@ import android.os.Vibrator;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -42,21 +27,21 @@ import androidx.core.content.PermissionChecker;
 
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.game.GamePreferences;
-import com.nyrds.pixeldungeon.support.Ads;
-import com.nyrds.pixeldungeon.support.Iap;
 import com.nyrds.pixeldungeon.support.PlayGames;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.app.RemixedDungeonApp;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.gfx.SystemText;
 import com.nyrds.platform.input.Keys;
+import com.nyrds.platform.input.PointerEvent;
+import com.nyrds.platform.support.Ads;
+import com.nyrds.platform.support.Iap;
 import com.nyrds.util.ReportingExecutor;
 import com.watabou.glscripts.Script;
 import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.InterstitialPoint;
 import com.watabou.noosa.Scene;
-import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.utils.Random;
@@ -68,31 +53,29 @@ import java.util.concurrent.Executor;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import lombok.Getter;
+
 @SuppressLint("Registered")
 public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTouchListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
+    public static final int REQUEST_CODE_OPEN_DOCUMENT_TREE_MOD_DIR_INSTALL = 37372;
+    public static final int REQUEST_CODE_OPEN_DOCUMENT_TREE_MOD_DIR_EXPORT = 37373;
+
+    public static boolean softPaused;
     @SuppressLint("StaticFieldLeak")
     private static Game instance;
 
-    // Actual size of the screen
-    private static int width;
-    private static int height;
-
-    public static String version = Utils.EMPTY_STRING;
-    public static int versionCode = 0;
     public PlayGames playGames;
     public Iap iap;
+    public Executor serviceExecutor = new ReportingExecutor();
 
 
     private GLSurfaceView view;
+    @Getter
     private LinearLayout layout;
 
-    private static volatile boolean paused = true;
-
-    public static volatile boolean softPaused = false;
-
-
-    public Executor serviceExecutor = new ReportingExecutor();
+    @Getter
+    private static volatile boolean paused = false;
 
     protected GameLoop gameLoop;
 
@@ -100,6 +83,21 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         super();
         instance = this;
         gameLoop = new GameLoop(c);
+    }
+
+    static public void runOnMainThread(Runnable runnable) {
+        GameLoop.pushUiTask( () -> {
+            instance().runOnUiThread(runnable);
+        });
+    }
+
+    static public void requestInternetPermission(InterstitialPoint returnTo) {
+        String[] requiredPermissions = {Manifest.permission.INTERNET};
+        instance().doPermissionsRequest(returnTo, requiredPermissions);
+    }
+
+    public static boolean smallResScreen() {
+        return false;
     }
 
     public void doRestart() {
@@ -116,12 +114,13 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         shutdown();
     }
 
+    //TODO investigate how it behaves
     public static void shutdown() {
-        paused = true;
-        instance().gameLoop.shutdown();
-
-        instance().finish();
-        System.exit(0);
+        GameLoop.pushUiTask(() -> {
+            instance.pause();
+            instance().finish();
+            System.exit(0);
+        });
     }
 
     public static void toast(final String text, final Object... args) {
@@ -135,7 +134,7 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
         String finalToastText = toastText;
 
-        GameLoop.runOnMainThread(() -> {
+        runOnMainThread(() -> {
 
             Toast toast = Toast.makeText(RemixedDungeonApp.getContext(), finalToastText,
                     Toast.LENGTH_SHORT);
@@ -149,16 +148,26 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         super.onSaveInstanceState(outState);
     }
 
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        iap.onNewIntent(intent);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         instance = this;
 
-        iap = new Iap(this);
+        iap = new Iap();
+        if (savedInstanceState == null) {
+            iap.onNewIntent(getIntent());
+        }
 
         try {
-            version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-            versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            GameLoop.version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            GameLoop.versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
         } catch (NameNotFoundException ignored) {
         }
 
@@ -171,12 +180,6 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         // view.setEGLConfigChooser( false );
         view.setRenderer(this);
         view.setOnTouchListener(this);
-
-        layout = new LinearLayout(this);
-        getLayout().setOrientation(LinearLayout.VERTICAL);
-        getLayout().addView(view);
-
-        setContentView(getLayout());
     }
 
     public static void syncAdsState() {
@@ -199,6 +202,17 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
     @Override
     public void onResume() {
         super.onResume();
+
+        ViewParent parent = view.getParent();
+        if (parent != null) {
+            layout.removeView(view);
+        }
+
+        layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.addView(view);
+        setContentView(layout);
+
         instance = this;
 
         view.onResume();
@@ -206,11 +220,8 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         gameLoop.onResume();
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
+    public void pause() {
         paused = true;
-        view.onPause();
 
         synchronized (GameLoop.stepLock) {
             if (gameLoop.scene != null) { // view.onPause will wait for gl thread, so it safe to access scene here
@@ -218,24 +229,31 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
             }
         }
 
-        Music.INSTANCE.pause();
+        MusicManager.INSTANCE.pause();
         Sample.INSTANCE.pause();
 
         Script.reset();
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        view.onPause();
+        pause();
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
 
-        Music.INSTANCE.mute();
+        MusicManager.INSTANCE.mute();
         Sample.INSTANCE.reset();
     }
 
     @SuppressLint({"Recycle", "ClickableViewAccessibility"})
     @Override
     public boolean onTouch(View view, MotionEvent event) {
-        gameLoop.motionEvents.add(MotionEvent.obtain(event));
+        gameLoop.motionEvents.add(new PointerEvent(MotionEvent.obtain(event)));
         return true;
     }
 
@@ -265,7 +283,7 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        if (instance() == null || width() == 0 || height() == 0) {
+        if (instance() == null || GameLoop.width == 0 || GameLoop.height == 0) {
             gameLoop.framesSinceInit = 0;
             return;
         }
@@ -278,8 +296,6 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         if(!isFinishing()) {
             gameLoop.onFrame();
         }
-
-
     }
 
     @Override
@@ -288,11 +304,8 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
         //GLog.i("viewport: %d %d",width, height );
 
-        Game.width(width);
-        Game.height(height);
-
-        SystemText.invalidate();
-        TextureCache.clear();
+        GameLoop.width = width;
+        GameLoop.height = height;
 
         GameLoop.setNeedSceneRestart();
     }
@@ -304,6 +317,7 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
         GLES20.glEnable(GL10.GL_SCISSOR_TEST);
 
+
         SystemText.invalidate();
         TextureCache.clear();
 
@@ -314,10 +328,6 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         }
     }
 
-    public static boolean isPaused() {
-        return paused;
-    }
-
 
     public static void vibrate(int milliseconds) {
         ((Vibrator) instance().getSystemService(VIBRATOR_SERVICE)).vibrate(milliseconds);
@@ -325,26 +335,6 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
     public synchronized static Game instance() {
         return instance;
-    }
-
-    public static boolean smallResScreen() {
-        return width() <= 320 && height() <= 320;
-    }
-
-    public static int width() {
-        return width;
-    }
-
-    private static void width(int width) {
-        Game.width = width;
-    }
-
-    public static int height() {
-        return height;
-    }
-
-    private static void height(int height) {
-        Game.height = height;
     }
 
     private InterstitialPoint permissionsPoint = new Utils.SpuriousReturn();
@@ -367,7 +357,7 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
         }
     }
 
-    public void onRequestPermissionsResult(int requestCode, @NotNull String @NotNull [] permissions, @NotNull int @NotNull [] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NotNull String @NotNull [] permissions, int @NotNull [] grantResults) {
         boolean res = true;
 
         if (permissions.length == 0) {
@@ -392,13 +382,32 @@ public class Game extends Activity implements GLSurfaceView.Renderer, View.OnTou
 
     }
 
-    public LinearLayout getLayout() {
-        return layout;
-    }
-
-    public void openUrl(String prompt, String address) {
+    static public void openUrl(String prompt, String address) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(address));
         Game.instance().startActivity(Intent.createChooser(intent, prompt));
+    }
+
+    static public void sendEmail(String emailUri, String subject) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("message/rfc822");
+        intent.putExtra(Intent.EXTRA_EMAIL, new String[] { emailUri });
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+
+        Game.instance().startActivity(Intent.createChooser(intent, emailUri));
+    }
+
+
+    public static void openPlayStore() {
+        final String appPackageName = instance().getPackageName();
+        try {
+            instance().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+        } catch (android.content.ActivityNotFoundException anfe) {
+            instance().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName)));
+        }
+    }
+
+    public static void updateFpsLimit() {
+
     }
 
 }

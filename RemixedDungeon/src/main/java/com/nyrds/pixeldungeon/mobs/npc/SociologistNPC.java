@@ -1,7 +1,5 @@
 package com.nyrds.pixeldungeon.mobs.npc;
 
-import android.Manifest;
-
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.windows.DownloadProgressWindow;
@@ -18,7 +16,6 @@ import com.watabou.pixeldungeon.windows.WndError;
 import com.watabou.pixeldungeon.windows.WndOptions;
 
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -45,8 +42,7 @@ public class SociologistNPC extends ImmortalNPC implements DownloadStateListener
             @Override
             public void onSelect(int index) {
                 if (index == 0) {
-                    String[] requiredPermissions = {Manifest.permission.INTERNET};
-                    Game.instance().doPermissionsRequest(SociologistNPC.this, requiredPermissions);
+                    Game.requestInternetPermission(SociologistNPC.this);
                 }
             }
         });
@@ -60,14 +56,8 @@ public class SociologistNPC extends ImmortalNPC implements DownloadStateListener
             if (!result) {
                 reportError();
             } else {
-                try {
-                    survey = JsonHelper.readJsonFromFile(FileSystem.getInternalStorageFile(SURVEY_JSON));
-
-                    GameLoop.addToScene(new WndSurvey(survey));
-
-                } catch (JSONException e) {
-                    reportError();
-                }
+                survey = JsonHelper.readJsonFromFile(FileSystem.getInternalStorageFile(SURVEY_JSON));
+                GameLoop.addToScene(new WndSurvey(survey));
             }
         });
     }

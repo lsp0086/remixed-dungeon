@@ -3,12 +3,11 @@ package com.watabou.pixeldungeon.scenes;
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.pixeldungeon.ml.R;
-import com.nyrds.platform.game.Game;
+import com.nyrds.platform.storage.CommonPrefs;
 import com.nyrds.platform.storage.Preferences;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.Camera;
-import com.watabou.noosa.Gizmo;
 import com.watabou.noosa.NinePatch;
 import com.watabou.noosa.Text;
 import com.watabou.noosa.ui.Component;
@@ -26,12 +25,11 @@ public class WelcomeScene extends PixelScene {
 		super.create();
 
         String[] upds = {
-                StringsManager.getVar(R.string.Welcome_Text_30),
                 StringsManager.getVar(R.string.Welcome_Text_30_1),
 				StringsManager.getVar(R.string.Welcome_Text_31_0),
 				StringsManager.getVar(R.string.Welcome_Text_31_1),
-				StringsManager.getVar(R.string.Welcome_Text_32)
-
+				StringsManager.getVar(R.string.Welcome_Text_32),
+				StringsManager.getVar(R.string.Welcome_Text_32_1),
 		};
 
 		int displayUpdates = Math.min(upds.length, 5);
@@ -89,10 +87,10 @@ public class WelcomeScene extends PixelScene {
         RedButton okay = new RedButton(StringsManager.getVar(R.string.Welcome_Ok)) {
 			@Override
 			protected void onClick() {
-				GamePreferences.version(Game.versionCode);
-				GamePreferences.versionString(Game.version);
+				GamePreferences.version(GameLoop.versionCode);
+				GamePreferences.versionString(GameLoop.version);
 
-				if (Preferences.INSTANCE.getInt(Preferences.KEY_COLLECT_STATS, 1) == 0) {
+				if (Preferences.INSTANCE.getInt(CommonPrefs.KEY_COLLECT_STATS, 1) == 0) {
 					GameLoop.switchScene(AllowStatisticsCollectionScene.class);
 				} else {
 					GameLoop.switchScene(TitleScene.class);

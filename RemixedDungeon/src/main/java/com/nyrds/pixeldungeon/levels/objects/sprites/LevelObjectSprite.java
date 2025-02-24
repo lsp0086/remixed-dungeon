@@ -2,6 +2,7 @@ package com.nyrds.pixeldungeon.levels.objects.sprites;
 
 import com.nyrds.pixeldungeon.levels.objects.LevelObject;
 import com.nyrds.util.ModError;
+import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.Animation;
 import com.watabou.noosa.MovieClip;
 import com.watabou.noosa.TextureFilm;
@@ -10,6 +11,7 @@ import com.watabou.noosa.tweeners.PosTweener;
 import com.watabou.noosa.tweeners.Tweener;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.DungeonTilemap;
+import com.watabou.pixeldungeon.levels.Level;
 import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.utils.Callback;
@@ -69,7 +71,7 @@ public class LevelObjectSprite extends MovieClip implements Tweener.Listener, Mo
 		int xs = object.getSpriteXS();
 		int ys = object.getSpriteYS();
 
-		frames = new TextureFilm(texture, xs, ys);
+		frames = TextureCache.getFilm(texture, xs, ys);
 		centerShift = new PointF(-(xs - DungeonTilemap.SIZE) / 2.f, -(ys-DungeonTilemap.SIZE) / 2.f);
 		setOrigin(xs / 2.f, ys / 2.f);
 
@@ -97,8 +99,9 @@ public class LevelObjectSprite extends MovieClip implements Tweener.Listener, Mo
 
 	@Override
 	public boolean getVisible() {
-		if(Dungeon.level != null) {
-			return Dungeon.level.mapped[cell] && super.getVisible();
+		Level level = Dungeon.level;
+		if(level != null && level.cellValid(cell)) {
+			return level.mapped[cell] && super.getVisible();
 		}
 		return false;
 	}

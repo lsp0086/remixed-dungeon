@@ -5,6 +5,7 @@ import com.nyrds.pixeldungeon.items.common.rings.RingOfFrost;
 import com.nyrds.pixeldungeon.items.guts.HeartOfDarkness;
 import com.nyrds.util.ModError;
 import com.nyrds.util.ModdingMode;
+import com.nyrds.util.Util;
 import com.watabou.pixeldungeon.actors.buffs.Amok;
 import com.watabou.pixeldungeon.actors.buffs.Awareness;
 import com.watabou.pixeldungeon.actors.buffs.Barkskin;
@@ -17,6 +18,7 @@ import com.watabou.pixeldungeon.actors.buffs.CandleOfMindVisionBuff;
 import com.watabou.pixeldungeon.actors.buffs.Charm;
 import com.watabou.pixeldungeon.actors.buffs.Combo;
 import com.watabou.pixeldungeon.actors.buffs.Cripple;
+import com.watabou.pixeldungeon.actors.buffs.DummyBuff;
 import com.watabou.pixeldungeon.actors.buffs.Frost;
 import com.watabou.pixeldungeon.actors.buffs.Fury;
 import com.watabou.pixeldungeon.actors.buffs.Hunger;
@@ -63,6 +65,10 @@ import lombok.SneakyThrows;
 
 
 public class BuffFactory {
+    public static final String CHAMPION_OF_EARTH = "ChampionOfEarth";
+    public static final String CHAMPION_OF_FIRE = "ChampionOfFire";
+    public static final String CHAMPION_OF_WATER = "ChampionOfWater";
+    public static final String CHAMPION_OF_AIR = "ChampionOfAir";
     static private final Map<String, Class<? extends Buff>> buffList = new HashMap<>();
 
     static private final Set<String> customBuffs = new HashSet<>();
@@ -205,6 +211,11 @@ public class BuffFactory {
             }
             return buffClass.newInstance();
         }
+
+        if (!Util.isDebug()) {
+            return DummyBuff.instance;
+        }
+
 
         throw new ModError(name, new Exception("Unknown Buff:"+name));
     }

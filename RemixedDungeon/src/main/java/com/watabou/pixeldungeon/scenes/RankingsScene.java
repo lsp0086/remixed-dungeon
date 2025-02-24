@@ -17,15 +17,16 @@
  */
 package com.watabou.pixeldungeon.scenes;
 
+
+
 import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.pixeldungeon.ml.R;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.BitmapText;
 import com.watabou.noosa.Camera;
-import com.watabou.noosa.Gizmo;
 import com.watabou.noosa.Image;
 import com.watabou.noosa.Text;
 import com.watabou.noosa.ui.Button;
@@ -42,6 +43,8 @@ import com.watabou.pixeldungeon.ui.RedButton;
 import com.watabou.pixeldungeon.ui.Window;
 import com.watabou.pixeldungeon.windows.WndError;
 import com.watabou.pixeldungeon.windows.WndRanking;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 
@@ -67,8 +70,7 @@ public class RankingsScene extends PixelScene {
     public void create() {
         super.create();
 
-        Music.INSTANCE.play(Assets.THEME, true);
-        Music.INSTANCE.volume(1f);
+        MusicManager.INSTANCE.play(Assets.THEME, true);
 
         uiCamera.setVisible(false);
 
@@ -81,7 +83,7 @@ public class RankingsScene extends PixelScene {
 
         Rankings.INSTANCE.load();
 
-        if (Rankings.INSTANCE.records.size() > 0) {
+        if (!Rankings.INSTANCE.records.isEmpty()) {
 
             float rowHeight = RemixedDungeon.landscape() ? ROW_HEIGHT_L : ROW_HEIGHT_P;
 
@@ -95,44 +97,7 @@ public class RankingsScene extends PixelScene {
 
             float btnHeight = rowHeight / 2;
 
-            RedButton btnNext = new RedButton(">") {
-                @Override
-                protected void onClick() {
-                    super.onClick();
-                    startFrom += recordsPerPage;
-
-                    if (startFrom > Rankings.TABLE_SIZE - recordsPerPage) {
-                        startFrom = Rankings.TABLE_SIZE - recordsPerPage;
-                    }
-
-                    if (startFrom > Rankings.INSTANCE.records.size()) {
-                        startFrom -= recordsPerPage;
-                    }
-
-                    switch (GamePreferences.donated()) {
-                        case 0:
-                            if (startFrom > 10) {
-                                startFrom = 10;
-                            }
-                            break;
-
-                        case 1:
-                            if (startFrom > 25) {
-                                startFrom = 25;
-                            }
-                            break;
-
-                        case 2:
-                            if (startFrom > 50) {
-                                startFrom = 50;
-                            }
-                            break;
-                    }
-
-                    createRecords();
-                }
-            };
-            btnNext.setRect(w / 2 + GAP, h - btnHeight, w / 2 - GAP, btnHeight);
+            RedButton btnNext = getBtnNext(w, h, btnHeight);
             add(btnNext);
 
             RedButton btnPrev = new RedButton("<") {
@@ -198,6 +163,59 @@ public class RankingsScene extends PixelScene {
         add(btnExit);
 
         fadeIn();
+    }
+
+    @NotNull
+    private RedButton getBtnNext(int w, int h, float btnHeight) {
+        RedButton btnNext = new RedButton(">") {
+            @Override
+            protected void onClick() {
+                super.onClick();
+                startFrom += recordsPerPage;
+
+                if (startFrom > Rankings.TABLE_SIZE - recordsPerPage) {
+                    startFrom = Rankings.TABLE_SIZE - recordsPerPage;
+                }
+
+                if (startFrom > Rankings.INSTANCE.records.size()) {
+                    startFrom -= recordsPerPage;
+                }
+
+                switch (GamePreferences.donated()) {
+                    case 0:
+                        if (startFrom > 10) {
+                            startFrom = 10;
+                        }
+                        break;
+
+                    case 1:
+                        if (startFrom > 25) {
+                            startFrom = 25;
+                        }
+                        break;
+
+                    case 2:
+                        if (startFrom > 50) {
+                            startFrom = 50;
+                        }
+                        break;
+                    case  3:
+                        if (startFrom >  75)  {
+                            startFrom = 75;
+                        }
+                        break;
+                    case  4:
+                        if (startFrom >  100)  {
+                            startFrom = 100;
+                        }
+                        break;
+                }
+
+                createRecords();
+            }
+        };
+        btnNext.setRect(w / 2 + GAP, h - btnHeight, w / 2 - GAP, btnHeight);
+        return btnNext;
     }
 
     private void createRecords() {
@@ -325,7 +343,7 @@ public class RankingsScene extends PixelScene {
         @Override
         protected void onClick() {
             Dungeon.reset();
-            if (rec.gameFile.length() > 0) {
+            if (!rec.gameFile.isEmpty()) {
                 getParent().add(new WndRanking(rec.gameFile));
             } else {
                 getParent().add(new WndError(StringsManager.getVar(R.string.RankingsScene_NoInfo)));

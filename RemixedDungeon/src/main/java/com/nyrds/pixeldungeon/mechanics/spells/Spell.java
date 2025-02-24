@@ -9,7 +9,6 @@ import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.ModError;
 import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.Image;
-import com.watabou.noosa.TextureFilm;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.hero.Hero;
@@ -171,7 +170,7 @@ public class Spell implements NamedEntityKind {
         val texture = TextureCache.get(texture());
         var spellImage = new Image(texture);
 
-        spellImage.frame(new TextureFilm(texture, 16, 16).get(getImage(caster)));
+        spellImage.frame(TextureCache.getFilm(texture, 16, 16).get(getImage(caster)));
 
         return spellImage;
     }

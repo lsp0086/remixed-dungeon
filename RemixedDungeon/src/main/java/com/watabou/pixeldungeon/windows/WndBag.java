@@ -1,9 +1,12 @@
 
 package com.watabou.pixeldungeon.windows;
 
+import android.view.KeyEvent;
+
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.utils.ItemsList;
 import com.nyrds.platform.game.RemixedDungeon;
+import com.nyrds.platform.input.Keys;
 import com.nyrds.util.GuiProperties;
 import com.watabou.noosa.Text;
 import com.watabou.pixeldungeon.Dungeon;
@@ -19,7 +22,6 @@ import com.watabou.pixeldungeon.items.bags.Quiver;
 import com.watabou.pixeldungeon.items.bags.ScrollHolder;
 import com.watabou.pixeldungeon.items.bags.SeedPouch;
 import com.watabou.pixeldungeon.items.bags.WandHolster;
-import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.scenes.PixelScene;
 import com.watabou.pixeldungeon.ui.Window;
 import com.watabou.pixeldungeon.utils.Utils;
@@ -29,6 +31,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 
+import lombok.Getter;
 
 
 public class WndBag extends WndTabbed {
@@ -37,19 +40,7 @@ public class WndBag extends WndTabbed {
 	private final Text txtTitle;
 	private Text txtSubTitle;
 
-	public static WndBag getInstance() {
-		return instance;
-	}
-
-	public Listener getListener() {
-		return listener;
-	}
-
-	public Mode getMode() {
-		return mode;
-	}
-
-	public enum Mode {
+    public enum Mode {
 		ALL,
 		UNIDENTIFED,
 		UPGRADEABLE,
@@ -77,8 +68,10 @@ public class WndBag extends WndTabbed {
 	private static final int TAB_WIDTH_P	= 18;
 	private static final int TAB_WIDTH_L	= 26;
 		
-	private final Listener listener;
-	private final WndBag.Mode mode;
+	@Getter
+    private final Listener listener;
+	@Getter
+    private final WndBag.Mode mode;
 	private final String title;
 
 	protected int count;
@@ -93,7 +86,8 @@ public class WndBag extends WndTabbed {
 	private static Mode lastMode;
 	private static Bag lastBag;
 
-	private static WndBag instance;
+	@Getter
+    private static WndBag instance;
 
 	private final Belongings stuff;
 
@@ -170,7 +164,7 @@ public class WndBag extends WndTabbed {
 
 		instance = this;
 	}
-	
+
 	public static WndBag lastBag(@NotNull Char owner, Listener listener, Mode mode, String title ) {
 
 		Belongings belongings = owner.getBelongings();
@@ -240,6 +234,7 @@ public class WndBag extends WndTabbed {
 		}
 
 		for(var child:childsToRemove) {
+			child.destroy();
 			remove(child);
 		}
 	}
@@ -318,7 +313,19 @@ public class WndBag extends WndTabbed {
 		
 		count++;
 	}
-	
+
+	@Override
+	public void onSignal( Keys.Key key ) {
+		if (key.pressed) {
+			switch (key.code) {
+				case KeyEvent.KEYCODE_I:
+					hide();
+					break;
+			}
+		}
+		super.onSignal(key);
+	}
+
 	@Override
 	public void onMenuPressed() {
 		if (listener == null) {

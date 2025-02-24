@@ -1,21 +1,16 @@
 
 package com.watabou.pixeldungeon.ui;
 
-import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.pixeldungeon.mechanics.spells.SpellHelper;
 import com.nyrds.pixeldungeon.windows.HBox;
 import com.nyrds.pixeldungeon.windows.VBox;
 import com.nyrds.pixeldungeon.windows.VHBox;
 import com.nyrds.pixeldungeon.windows.WndHeroSpells;
-import com.nyrds.platform.storage.Preferences;
-import com.nyrds.util.Util;
 import com.watabou.noosa.ui.Component;
 import com.watabou.pixeldungeon.Chrome;
-import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.items.Item;
-import com.watabou.pixeldungeon.scenes.CellSelector;
 import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.windows.elements.Tool;
 
@@ -77,7 +72,7 @@ public class Toolbar extends Component {
             @Override
             protected void onClick() {
                 if (hero.isReady()) {
-                    hero.selectCell(informer);
+                    hero.selectCell(GameScene.informer);
                 }
             }
         };
@@ -206,8 +201,6 @@ public class Toolbar extends Component {
         toolbar.setRect(x, camera.height - toolbar.height(), camera.width, toolbar.height());
         add(toolbar);
     }
-
-    private static final CellSelector.Listener informer = new InformerCellListener();
 
     public void pickup(Item item) {
         btnInventory.pickUp(item);

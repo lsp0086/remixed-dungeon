@@ -2,6 +2,7 @@ package com.watabou.noosa;
 
 import com.nyrds.platform.compatibility.RectF;
 import com.nyrds.platform.gl.Texture;
+import com.nyrds.platform.gl.NoosaScript;
 
 import java.util.ArrayList;
 
@@ -13,8 +14,8 @@ public class CompositeMovieClip extends MovieClip {
 	private ArrayList<LayerDesc> mLayers;
 
 	private static class LayerDesc {
-		String id;
-		Texture texture;
+		final String id;
+		final Texture texture;
 
 		LayerDesc(String _id, Texture _tex) {
 			id = _id;

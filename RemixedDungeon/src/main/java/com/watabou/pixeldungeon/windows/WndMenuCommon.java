@@ -4,12 +4,15 @@ package com.watabou.pixeldungeon.windows;
 import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.windows.VBox;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.audio.Sample;
+import com.nyrds.platform.game.Game;
 import com.nyrds.platform.util.StringsManager;
 import com.watabou.noosa.Image;
 import com.watabou.pixeldungeon.Assets;
 import com.watabou.pixeldungeon.ui.CheckBox;
 import com.watabou.pixeldungeon.ui.RedButton;
+import com.watabou.pixeldungeon.ui.Slider;
 import com.watabou.pixeldungeon.ui.Window;
 
 public abstract class WndMenuCommon extends Window {
@@ -32,27 +35,48 @@ public abstract class WndMenuCommon extends Window {
 
     @Override
 	public void onBackPressed() {
-		hide();
-	}
+        super.onBackPressed();
+    }
 
     protected void addSoundControls(VBox menuItems) {
-        menuItems.add(new MenuCheckBox(R.string.WndSettings_Music, GamePreferences.music()) {
+
+        Slider fps = new Slider(R.string.WndSettings_FpsLimit, "30", "120", 0, 2) {
             @Override
-            protected void onClick() {
-                super.onClick();
-                GamePreferences.music(checked());
+            protected void onChange() {
+                int value = getSelectedValue();
+                GamePreferences.fps_limit(value);
+                Game.updateFpsLimit();
             }
-        });
+        };
+        fps.setSelectedValue(GamePreferences.fps_limit());
+        fps.setSize(WIDTH,BUTTON_HEIGHT);
+        menuItems.add(fps);
 
-
-        menuItems.add(new MenuCheckBox(R.string.WndSettings_Sound, GamePreferences.soundFx()) {
+        Slider sfx = new Slider(R.string.WndSettings_Sound, "0", "1", 0, 10) {
             @Override
-            protected void onClick() {
-                super.onClick();
-                GamePreferences.soundFx(checked());
+            protected void onChange() {
+                int value = getSelectedValue();
+                GamePreferences.soundFxVolume(value);
+                GamePreferences.soundFx(value > 0);
                 Sample.INSTANCE.play(Assets.SND_CLICK);
             }
-        });
+        };
+        sfx.setSelectedValue(GamePreferences.soundFxVolume());
+        sfx.setSize(WIDTH,BUTTON_HEIGHT);
+        menuItems.add(sfx);
+
+        Slider music = new Slider(R.string.WndSettings_Music, "0", "1", 0, 10) {
+            @Override
+            protected void onChange() {
+                int value = getSelectedValue();
+                GamePreferences.musicVolume(value);
+                GamePreferences.music(value > 0);
+                MusicManager.INSTANCE.resume();
+            }
+        };
+        music.setSelectedValue(GamePreferences.musicVolume());
+        music.setSize(WIDTH,BUTTON_HEIGHT);
+        menuItems.add(music);
     }
 
 

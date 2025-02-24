@@ -3,61 +3,83 @@ package com.watabou.pixeldungeon.windows;
 
 import com.nyrds.LuaInterface;
 import com.nyrds.pixeldungeon.ml.R;
+import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.util.StringsManager;
-import com.watabou.gltextures.SmartTexture;
-import com.watabou.gltextures.TextureCache;
-import com.watabou.noosa.TextureFilm;
-import com.watabou.pixeldungeon.Assets;
 import com.watabou.pixeldungeon.actors.Char;
+import com.watabou.pixeldungeon.actors.CharUtils;
+import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.pixeldungeon.windows.elements.LabeledTab;
 import com.watabou.pixeldungeon.windows.elements.Tab;
 
+import lombok.val;
+
 public class WndChar extends WndTabbed {
     public static final int WIDTH = 100;
-    private static final int TAB_WIDTH = 33;
-    private Char target;
+    public static final int L_WIDTH = 140;
+
+    private final Char target;
+    private final Char selector;
 
     public WndChar(final Char chr, final Char selector) {
 
         super();
         target = chr;
+        this.selector  = selector;
 
-        var desc = new CharDescTab(chr, selector, WIDTH);
+        if(chr.friendly(selector)) {
+            CharUtils.mark(target);
+            CharUtils.markTarget(target);
+        }
+
+        int width = RemixedDungeon.landscape() ? L_WIDTH : WIDTH;
+
+        var desc = new CharDescTab(chr, selector, width);
         add(desc);
 
-        var stats = new StatsTab(chr);
+        var stats = new StatsTab(chr, width);
         add(stats);
 
-        var buffs = new BuffsTab(chr);
+        var buffs = new BuffsTab(chr, width);
         add(buffs);
 
-        add(new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Info)) {
+
+        val infoTab = new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Info)) {
             public void select(boolean value) {
                 super.select(value);
                 desc.setVisible(desc.setActive(selected));
             }
-        });
+        };
 
-        add(new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Stats)) {
+        val statsTab = new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Stats)) {
             public void select(boolean value) {
                 super.select(value);
                 stats.setVisible(stats.setActive(selected));
             }
-        });
+        };
 
-        add(new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Buffs)) {
+        val buffsTab = new LabeledTab(this, StringsManager.getVar(R.string.WndHero_Buffs)) {
             public void select(boolean value) {
                 super.select(value);
                 buffs.setVisible(buffs.setActive(selected));
             }
-        });
+        };
 
-        for (Tab tab : tabs) {
-            tab.setSize(TAB_WIDTH, tabHeight());
+        if (target instanceof Hero) {
+            add(statsTab);
+            add(buffsTab);
+            add(infoTab);
+        } else {
+            add(infoTab);
+            add(statsTab);
+            add(buffsTab);
         }
 
-        resize(WIDTH, (int) Utils.max(desc.height() + GAP,stats.height() + GAP, buffs.height() + GAP));
+        for (Tab tab : tabs) {
+            tab.setSize((float) width /3, tabHeight());
+        }
+
+        resize(width, (int) Utils.max(desc.height() + GAP, stats.height() + GAP, buffs.height() + GAP));
 
         select(0);
     }
@@ -67,4 +89,10 @@ public class WndChar extends WndTabbed {
         return target;
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        selector.readyAndIdle();
+        CharUtils.clearMarkers();
+    }
 }

@@ -29,7 +29,7 @@ public class Bag extends Item implements Iterable<Item> {
 		setDefaultAction(AC_OPEN);
 	}
 
-	public ArrayList<Item> items = new ArrayList<>();
+	public final ArrayList<Item> items = new ArrayList<>();
 		
 	@Override
 	public ArrayList<String> actions(Char hero ) {
@@ -209,5 +209,13 @@ public class Bag extends Item implements Iterable<Item> {
 	@Override
 	public String getEntityKind() {
 		return getClass().getSimpleName();
+	}
+
+	@Override
+	public void setOwner(Char owner) {
+		super.setOwner(owner);
+		for(Item i:items) {
+			i.setOwner(owner);
+		}
 	}
 }

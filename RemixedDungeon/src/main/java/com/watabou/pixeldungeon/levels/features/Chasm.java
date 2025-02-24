@@ -62,6 +62,10 @@ public class Chasm implements Doom {
 	private static void mobFall( Mob mob ) {
 		mob.die(new Chasm());
 
+		if(Dungeon.hero.myMove()) {
+			Badges.validateBadge(Badges.Badge.THIS_IS_SPARTA);
+		}
+
 		mob.getSprite().fall();
 	}
 
@@ -88,7 +92,7 @@ public class Chasm implements Doom {
 	}
 
 	@Override
-	public void onDeath() {
+	public void onHeroDeath() {
 		Badges.validateDeathFromFalling();
 
 		Dungeon.fail( Utils.format( ResultDescriptions.getDescription(ResultDescriptions.Reason.FALL), Dungeon.depth ) );

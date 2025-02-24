@@ -1,14 +1,15 @@
 package com.watabou.pixeldungeon;
 
 import com.nyrds.util.SeededRandom;
+import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.CompositeImage;
 import com.watabou.noosa.Image;
-import com.watabou.noosa.TextureFilm;
 import com.watabou.noosa.Tilemap;
 import com.watabou.pixeldungeon.levels.Level;
 import com.watabou.pixeldungeon.levels.Terrain;
 import com.watabou.pixeldungeon.levels.TerrainFlags;
 import com.watabou.pixeldungeon.utils.BArray;
+import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.pixeldungeon.utils.Utils;
 
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +44,7 @@ public class XyzDungeonTilemap extends DungeonTilemap {
     private final DungeonTilemap roofTilemap;
     private final DungeonTilemap doorTilemap;
 
-    SeededRandom random = new SeededRandom();
+    final SeededRandom random = new SeededRandom();
 
     private final int mSize;
     private final int mWidth;
@@ -62,12 +63,12 @@ public class XyzDungeonTilemap extends DungeonTilemap {
 
         map(buildGroundMap(), mWidth);
 
-        mWallsLayer = new Tilemap(tiles, new TextureFilm(tiles, SIZE, SIZE));
-        mDecoLayer = new Tilemap(tiles, new TextureFilm(tiles, SIZE, SIZE));
-        mRoofLayer = new Tilemap(tiles, new TextureFilm(tiles, SIZE, SIZE));
+        mWallsLayer = new Tilemap(tiles, TextureCache.getFilm(tiles, SIZE, SIZE));
+        mDecoLayer = new Tilemap(tiles, TextureCache.getFilm(tiles, SIZE, SIZE));
+        mRoofLayer = new Tilemap(tiles, TextureCache.getFilm(tiles, SIZE, SIZE));
 
-        mCornersLayer = new Tilemap(tiles, new TextureFilm(tiles, SIZE, SIZE));
-        mDoorsLayer = new Tilemap(tiles, new TextureFilm(tiles, SIZE, SIZE));
+        mCornersLayer = new Tilemap(tiles, TextureCache.getFilm(tiles, SIZE, SIZE));
+        mDoorsLayer = new Tilemap(tiles, TextureCache.getFilm(tiles, SIZE, SIZE));
 
         mWallsMap = new int[mSize];
         mDecoMap = new int[mSize];
@@ -634,6 +635,11 @@ public class XyzDungeonTilemap extends DungeonTilemap {
 
     @Override
     public void updateFow(@NotNull FogOfWar fog) {
+
+        if(Dungeon.visible.length != mVisible.length) {
+            GLog.debug("Dungeon.visible.length != mVisible.length");
+            Utils.printStackTrace();
+        }
 
         System.arraycopy(Dungeon.visible, 0, mVisible, 0, mVisible.length);
 

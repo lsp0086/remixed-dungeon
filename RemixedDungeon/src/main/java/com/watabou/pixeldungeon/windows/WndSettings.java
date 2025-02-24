@@ -7,9 +7,12 @@ import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.windows.WndGameplaySettings;
 import com.nyrds.pixeldungeon.windows.WndUiSettings;
 import com.nyrds.platform.util.StringsManager;
-import com.watabou.pixeldungeon.utils.Utils;
 
 public class WndSettings extends WndMenuCommon {
+
+	static public final String[] langNames = {"English",
+			"Русский", "Français", "Polski", "Español", "한국말", "Português brasileiro", "Italiano", "Deutsch", "简体中文","繁體中文", "Türkçe", "Украї́нська","Bahasa Melayu","Magyar Nyelv","Bahasa Indonesia","Ελληνικά","日本語"};
+	static public final String[] lang = {"en", "ru", "fr", "pl", "es", "ko", "pt_BR", "it", "de", "zh_CN", "zh_TW", "tr", "uk","ms","hu","in","el","ja"};
 
 	@Override
 	protected void createItems() {
@@ -38,15 +41,10 @@ public class WndSettings extends WndMenuCommon {
 			@Override
 			protected void onClick() {
 				GameLoop.scene().add(
-						new WndSelectLanguage(selectLanguage, "English",
-								"Русский", "Français", "Polski", "Español", "한국말", "Português brasileiro", "Italiano", "Deutsch", "简体中文","繁體中文", "Türkçe", "Украї́нська","Bahasa Melayu","Magyar Nyelv","Bahasa Indonesia","Ελληνικά") {
+						new WndSelectLanguage(selectLanguage, langNames) {
 
 							@Override
 							protected void onSelect(int index) {
-								String[] lang = {"en", "ru", "fr", "pl", "es", "ko", "pt_BR", "it", "de", "zh_CN", "zh_TW", "tr", "uk","ms","hu","in","el"};
-								//if (!Utils.canUseClassicFont(lang[index])) {
-								//	GamePreferences.classicFont(false);
-								//}
 								GamePreferences.uiLanguage(lang[index]);
 							}
 						});

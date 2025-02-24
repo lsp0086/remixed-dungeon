@@ -16,12 +16,12 @@
  */
 
 package com.watabou.noosa;
+
 import com.nyrds.LuaInterface;
 import com.nyrds.pixeldungeon.mechanics.LuaScript;
 import com.nyrds.platform.game.Game;
 import com.nyrds.platform.input.Keys;
 import com.watabou.pixeldungeon.ui.IWindow;
-import com.watabou.pixeldungeon.ui.Window;
 import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.utils.Signal;
 
@@ -34,10 +34,11 @@ public class Scene extends Group {
 	private Signal.Listener<Keys.Key> keyListener;
 	private final ArrayList<IWindow> activeWindows = new ArrayList<>();
 
-	static protected LuaScript script = new LuaScript("scripts/services/scene", null);
+	static protected final LuaScript script = new LuaScript("scripts/services/scene", null);
 	static public String sceneMode = "none";
 
 	public void create() {
+		GLog.debug("Creating scene %s", this.getClass().getSimpleName());
 		Keys.event.add( keyListener = key -> {
 			if (Game.instance() != null && key.pressed) {
 				switch (key.code) {
@@ -47,9 +48,14 @@ public class Scene extends Group {
 				case Keys.MENU:
 					onMenuPressed();
 					break;
+				default:
+					onKeyPressed(key.code);
 				}
 			}
 		});
+	}
+
+	protected void onKeyPressed(int code) {
 	}
 
 	@LuaInterface
@@ -91,6 +97,7 @@ public class Scene extends Group {
 
 	@Override
 	public void destroy() {
+		GLog.debug("Destroying scene %s", this.getClass().getSimpleName());
 		Keys.event.remove( keyListener );
 		super.destroy();
 	}

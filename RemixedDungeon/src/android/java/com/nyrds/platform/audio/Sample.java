@@ -22,13 +22,11 @@ import android.content.res.AssetManager;
 import android.media.AudioManager;
 import android.media.SoundPool;
 
-import androidx.annotation.NonNull;
-
 import com.nyrds.pixeldungeon.game.GameLoop;
+import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.game.Game;
 import com.nyrds.util.ModdingMode;
-import com.nyrds.util.ReportingExecutor;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -38,7 +36,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 
 public enum Sample implements SoundPool.OnLoadCompleteListener {
 
@@ -50,7 +47,7 @@ public enum Sample implements SoundPool.OnLoadCompleteListener {
 	private SoundPool pool =
 			new SoundPool(MAX_STREAMS, AudioManager.STREAM_MUSIC, 0);
 
-	@NonNull
+	@NotNull
 	private final Set<String> missingAssets = new HashSet<>();
 
 	@NotNull
@@ -133,7 +130,9 @@ public enum Sample implements SoundPool.OnLoadCompleteListener {
 		GameLoop.instance().soundExecutor.execute(() -> {
 			Integer sampleId = ids.get(id);
 			if (sampleId != null) {
-				pool.play(sampleId, leftVolume, rightVolume, 0, 0, rate);
+				float g_volume = GamePreferences.soundFxVolume() / 10f;
+
+				pool.play(sampleId, leftVolume * g_volume, rightVolume * g_volume, 0, 0, rate);
 			} else {
 				playOnComplete = id;
 				GameLoop.execute(() -> load(id));

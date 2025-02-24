@@ -10,6 +10,7 @@ import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.mobs.Fraction;
 import com.watabou.pixeldungeon.actors.mobs.WalkingType;
 import com.watabou.pixeldungeon.mechanics.Ballistica;
+import com.watabou.pixeldungeon.utils.GLog;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -24,6 +25,7 @@ import lombok.SneakyThrows;
 public class CustomMob extends MultiKindMob implements IZapper {
 
 	private float attackDelay = 1;
+	private int spriteLayer = 0;
 
 	@Packable
 	private String mobClass = "Unknown";
@@ -43,6 +45,7 @@ public class CustomMob extends MultiKindMob implements IZapper {
 		super();
 		this.mobClass = mobClass;
 		fillMobStats(false);
+		getScript().run("fillStats");
 	}
 
 	@Override
@@ -99,12 +102,12 @@ public class CustomMob extends MultiKindMob implements IZapper {
 		super.damage(dmg, src);
 	}
 
-
 	@SneakyThrows
 	@Override
 	protected void fillMobStats(boolean restoring) {
 		JSONObject classDesc = getClassDef();
 		if(! classDesc.keys().hasNext()) {
+			GLog.debug("No mob def: " + mobClass);
 			return;
 		}
 
@@ -144,7 +147,10 @@ public class CustomMob extends MultiKindMob implements IZapper {
 		movable = classDesc.optBoolean("movable",movable);
 		immortal = classDesc.optBoolean("immortal",immortal);
 
+		spriteLayer = classDesc.optInt("spriteLayer",spriteLayer);
+
 		kind = classDesc.optInt("var", kind);
+		carcassChance = (float) classDesc.optDouble("carcassChance", carcassChance);
 
 		JsonHelper.readStringSet(classDesc, Char.IMMUNITIES, immunities);
 		JsonHelper.readStringSet(classDesc, Char.RESISTANCES, resistances);
@@ -156,4 +162,8 @@ public class CustomMob extends MultiKindMob implements IZapper {
 		}
 	}
 
+	@Override
+	public int getSpriteLayer() {
+		return spriteLayer;
+	}
 }

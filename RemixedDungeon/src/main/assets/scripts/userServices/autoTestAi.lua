@@ -7,7 +7,6 @@
 local RPD = require "scripts.lib.commonClasses"
 local lru = require "scripts.lib.lru"
 
-
 local explorationCache = lru.new(10);
 
 local ai = {}
@@ -15,86 +14,108 @@ local ai = {}
 local function handleWindow(hero)
     local activeWindow = RPD.RemixedDungeon:scene():getWindow(0)
 
-    if activeWindow then
-        local wndClass = tostring(activeWindow:getClass())
-        RPD.debug("wnd: %s",wndClass)
+    if not activeWindow then
+        return false
+    end
 
-        local isWindow = true
+    local wndClass = tostring(activeWindow:getClass())
 
-        if wndClass:match('WndChar') then
-            local target = activeWindow:getTarget()
-            local action = RPD.CharUtils:randomAction(target,hero)
-            RPD.CharUtils:execute(target, hero, action)
-            activeWindow:hide()
-            return true
+    if wndClass:match('CellSelector') then
+        --RPD.debug("cell selector: %s", wndClass)
+        activeWindow = RPD.RemixedDungeon:scene():getWindow(1)
+        if not activeWindow then
+            return false
         end
+        wndClass = tostring(activeWindow:getClass())
+    end
 
-        if wndClass:match('WndStepOnTrap') then
+    RPD.debug("wnd: %s", wndClass)
+
+    if wndClass:match('WndChar') then
+        local target = activeWindow:getTarget()
+        local action = RPD.CharUtils:randomAction(target, hero)
+        RPD.CharUtils:execute(target, hero, action)
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('WndStepOnTrap') then
+        activeWindow:onSelect(0)
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('WndItem') then
+        activeWindow:onSelect(0)
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('WndChasmJump') then
+        if math.random() < 0.05 then
             activeWindow:onSelect(0)
-            activeWindow:hide()
-            return true
+        else
+            activeWindow:onSelect(1)
         end
+        return true
+    end
 
-        if wndClass:match('WndChasmJump') then
-            if math.random()<0.05 then
-                activeWindow:onSelect(0)
-            else
-                activeWindow:onSelect(1)
-            end
-            return true
+    if wndClass:match('Potion') then
+        if math.random() < 0.5 then
+            activeWindow:onSelect(0)
+        else
+            activeWindow:onSelect(1)
         end
+        activeWindow:hide()
+        return true
+    end
 
-        if wndClass:match('Potion') then
-            if math.random()<0.5 then
-                activeWindow:onSelect(0)
-            else
-                activeWindow:onSelect(1)
-            end
-            activeWindow:hide()
-            return true
-        end
+    if wndClass:match('CellSelectorToast') then
+        cell = hero:level():randomDestination()
+        RPD.debug("wnd toast: %s %d", wndClass, cell)
 
-
-        if wndClass:match('CellSelectorToast') then
-            cell = hero:level():randomDestination()
-            RPD.debug("wnd toast: %s %d",wndClass, cell)
-
-            RPD.GameScene:handleCell(cell)
-            RPD.GameScene:ready()
-            return true
-        end
-
-        if wndClass:match('CellSelector') then
-            RPD.GameScene:handleCell(hero:level():randomDestination())
-            return true
-        end
-
-        if wndClass:match('WndQuest') then
-            activeWindow:hide()
-            return true
-        end
-
-        if wndClass:match("WndShopOptions") then
-            activeWindow:hide()
-            return true
-        end
-
-        if wndClass:match('WndBag') then
-            activeWindow:hide()
-            return true
-        end
-
-        if wndClass:match('WndStory') then
-            activeWindow:hide()
-            return true
-        end
-
-
-
-        RPD.debug("unmatched wnd: %s",wndClass)
+        RPD.GameScene:handleCell(cell)
+        hero:readyAndIdle()
 
         return true
     end
+
+    if wndClass:match('WndQuest') then
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match("WndShopOptions") then
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('WndBag') then
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('WndStory') then
+        activeWindow:hide()
+        return true
+    end
+
+    if wndClass:match('com.watabou.pixeldungeon.scenes.DefaultCellListener') then
+        activeWindow:hide()
+        return false
+    end
+
+    if wndClass:match('CellSelector') then
+        RPD.GameScene:handleCell(hero:level():randomDestination())
+        return true
+    end
+
+    RPD.debug("unmatched wnd: %s", wndClass)
+
+    activeWindow:hide()
+
+    return false
+
 end
 
 local function handleItem(hero, item, ignoreAction)
@@ -107,7 +128,7 @@ local function handleItem(hero, item, ignoreAction)
 
     if #actions > 0 then
         local action = actions[math.random(#actions)]
-        if action ~=ignoreAction then
+        if action ~= ignoreAction then
             item:execute(hero, action)
         end
     end
@@ -172,6 +193,12 @@ ai.step = function()
         return
     end
 
+    local enemy = hero:getNearestEnemy()
+    if enemy:valid() then
+        hero:handle(enemy:getPos())
+        return
+    end
+
     local objectPos = level:getNearestVisibleLevelObject(heroPos)
 
     if level:cellValid(objectPos) then
@@ -198,23 +225,23 @@ ai.step = function()
         handleItem(hero, hero:getBelongings():randomEquipped(), RPD.Actions.throw)
         return
     end
---[[
-    local exitCell = level:getRandomVisibleTerrainCell(RPD.Terrain.EXIT)
+    --[[
+        local exitCell = level:getRandomVisibleTerrainCell(RPD.Terrain.EXIT)
 
-    if level:cellValid(exitCell) and not level:getTopLevelObject(exitCell) then
-        hero:handle(exitCell)
-        return
-    end
+        if level:cellValid(exitCell) and not level:getTopLevelObject(exitCell) then
+            hero:handle(exitCell)
+            return
+        end
 
-    exitCell = level:getRandomVisibleTerrainCell(RPD.Terrain.LOCKED_EXIT)
-    if level:cellValid(exitCell) and not level:getTopLevelObject(exitCell) and hero:getItem("SkeletonKey"):valid() then
-        hero:handle(exitCell)
-        return
-    end
-]]
+        exitCell = level:getRandomVisibleTerrainCell(RPD.Terrain.LOCKED_EXIT)
+        if level:cellValid(exitCell) and not level:getTopLevelObject(exitCell) and hero:getItem("SkeletonKey"):valid() then
+            hero:handle(exitCell)
+            return
+        end
+    ]]
     local doorCell = level:getRandomVisibleTerrainCell(RPD.Terrain.DOOR)
 
-    if level:cellValid(doorCell) and  not level:isCellVisited(doorCell) then
+    if level:cellValid(doorCell) and not level:isCellVisited(doorCell) then
         hero:handle(doorCell)
         return
     end
@@ -235,6 +262,10 @@ ai.step = function()
     explorationCache:set(cell, true)
 
     hero:handle(cell)
+end
+
+ai.selectCell = function(self)
+    RPD.GameScene:handleCell(RPD.Dungeon.level:randomDestination())
 end
 
 return ai

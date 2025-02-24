@@ -4,10 +4,10 @@ import com.nyrds.pixeldungeon.ai.Hunting;
 import com.nyrds.pixeldungeon.game.ModQuirks;
 import com.nyrds.pixeldungeon.mechanics.NamedEntityKind;
 import com.nyrds.pixeldungeon.mobs.common.ShadowLord;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.game.RemixedDungeon;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.ModdingMode;
-import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.items.keys.SkeletonKey;
 import com.watabou.pixeldungeon.items.scrolls.ScrollOfPsionicBlast;
 import com.watabou.pixeldungeon.items.weapon.enchantments.Death;
@@ -30,7 +30,7 @@ abstract public class Boss extends Mob {
 		addResistance(Death.class);
 		addResistance(ScrollOfPsionicBlast.class);
 		if(ModQuirks.mobLeveling) {
-			lvl(Random.NormalIntRange(1, (int) (2 * RemixedDungeon.getDifficultyFactor())));
+			lvl(Random.Int(1, (int) RemixedDungeon.getDifficultyFactor()+1));
 		}
 		maxLvl = 50;
 		isBoss = true;
@@ -45,7 +45,7 @@ abstract public class Boss extends Mob {
 	public boolean act() {
 		if (state instanceof Hunting) {
 			if (battleMusic != null) {
-				Music.INSTANCE.play(battleMusic, true);
+				MusicManager.INSTANCE.play(battleMusic, true);
 			}
 		}
 		return super.act();
@@ -63,7 +63,7 @@ abstract public class Boss extends Mob {
 	@Override
 	protected void setupCharData() {
 		super.setupCharData();
-		battleMusic = getClassDef().optString(BATTLE_MUSIC, ModdingMode.NO_FILE);
+		battleMusic = getClassDef().optString(BATTLE_MUSIC, ModdingBase.NO_FILE);
 		if(ModdingMode.isSoundExists(battleMusic)) {
 			return;
 		}

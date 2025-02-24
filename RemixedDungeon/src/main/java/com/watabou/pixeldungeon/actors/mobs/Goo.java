@@ -49,13 +49,12 @@ public class Goo extends Boss {
 		if (pumpedUp) {
 			dmgMin = 7;
 			dmgMax = 21;
-			return super.damageRoll();
-		} else {
+        } else {
 			dmgMin = 4;
 			dmgMax = 11;
-			return super.damageRoll();
-		}
-	}
+        }
+        return super.damageRoll();
+    }
 	
 	@Override
 	public int attackSkill( Char target ) {
@@ -117,9 +116,9 @@ public class Goo extends Boss {
 	}
 	
 	@Override
-	public boolean getCloser(int target) {
+	public boolean getCloser(int target,  boolean ignorePets) {
 		pumpedUp = false;
-		return super.getCloser( target );
+		return super.getCloser( target, ignorePets );
 	}
 
 	@Override

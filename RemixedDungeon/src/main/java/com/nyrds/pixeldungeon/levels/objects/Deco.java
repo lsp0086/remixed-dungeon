@@ -6,9 +6,9 @@ import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.JsonHelper;
 import com.nyrds.util.ModError;
 import com.nyrds.util.Util;
+import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.Animation;
 import com.watabou.noosa.Group;
-import com.watabou.noosa.TextureFilm;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.levels.Level;
 import com.watabou.pixeldungeon.scenes.GameScene;
@@ -156,9 +156,9 @@ public class Deco extends LevelObject {
 			try {
 				return JsonHelper.readAnimation(animations,
 						kind,
-						new TextureFilm(textureFile, width, height),
+						TextureCache.getFilm(textureFile, width, height),
 						0);
-			} catch (JSONException e) {
+			} catch (Exception e) {
 				throw new ModError("Deco:" + name + "|" + kind + ":", e);
 			}
 		}

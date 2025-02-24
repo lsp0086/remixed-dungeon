@@ -13,7 +13,7 @@ translations_dir = 'translations/'
 
 
 source_locales = {"en","tr","ko","hu","it",'de_DE', 'es', 'fr_FR', 'pl_PL', 'ru',
-                  'uk_UA', 'pt_BR', "ms_MY","zh_CN", "zh_TW", "id", 'el'}
+                  'uk_UA', 'pt_BR', "ms_MY","zh_CN", "zh_TW", "id", 'el', 'ja'}
 
 locale_remap = {'de_DE': 'de', 'fr_FR': 'fr', 'pl_PL': 'pl', 'nl_NL': 'nl', 'ro_RO': 'ro',
                 'uk_UA': 'uk', 'pt_BR': 'pt-rBR', 'pt_PT': 'pt-rPT', 'es_MX': 'es-rMX', "ms_MY": "ms", "zh_CN":'zh-rCN',
@@ -82,6 +82,14 @@ def processText(arg):
     return ret
 
 
+r_strings = set()
+r_arrays = set()
+
+d_strings = {}
+d_arrays = {}
+
+locales = []
+
 for _, _, files in os.walk(translations_dir + dir_name):
 
     arrays = ElementTree.Element("resources")
@@ -96,6 +104,8 @@ for _, _, files in os.walk(translations_dir + dir_name):
         if locale_code in locale_remap:
             locale_code = locale_remap[locale_code]
 
+        d_strings[locale_code] = {}
+        locales.append(locale_code)
 
         if locale_code not in totalCounter:
             totalCounter[locale_code] = 0
@@ -116,8 +126,7 @@ for _, _, files in os.walk(translations_dir + dir_name):
         changelog_key = "Welcome_Text_0"
         try:
             transifexData = ElementTree.parse(currentFilePath).getroot()
-
-            jsonData = open("strings_" + locale_code + ".json", "w", encoding='utf8')
+            entriesToRemove = []
 
             for entry in transifexData:
 
@@ -138,14 +147,19 @@ for _, _, files in os.walk(translations_dir + dir_name):
                             changelog_key = entry_name
                             changelog[locale_code] = entry.text
 
-                    jsonData.write(unescape(json.dumps([entry.get("name"), entry.text], ensure_ascii=False)))
-                    jsonData.write("\n")
+                    if entry_name.endswith("_Gender"):
+                        if entry.text not in ("masculine", "feminine","neuter"):
+                            entriesToRemove.append(entry)
+                            continue
+
 
                 entry.text = processText(entry.text)
 
+            for entry in entriesToRemove:
+                transifexData.remove(entry)
+
             indent(transifexData)
 
-            jsonData.close()
 
             xml_out_name = resource_dir + "/" + resource_name
             ElementTree.ElementTree(transifexData).write(xml_out_name, encoding="utf-8", method="xml")

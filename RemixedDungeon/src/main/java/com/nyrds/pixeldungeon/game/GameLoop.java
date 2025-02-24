@@ -1,16 +1,17 @@
 package com.nyrds.pixeldungeon.game;
 
 import android.view.KeyEvent;
-import android.view.MotionEvent;
 
 import com.nyrds.LuaInterface;
 import com.nyrds.platform.EventCollector;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.game.Game;
 import com.nyrds.platform.gfx.SystemText;
 import com.nyrds.platform.gl.Gl;
+import com.nyrds.platform.gl.NoosaScript;
 import com.nyrds.platform.input.Keys;
+import com.nyrds.platform.input.PointerEvent;
 import com.nyrds.platform.input.Touchscreen;
 import com.nyrds.platform.util.TrackedRuntimeException;
 import com.nyrds.util.ModdingMode;
@@ -18,16 +19,15 @@ import com.nyrds.util.ReportingExecutor;
 import com.watabou.gltextures.TextureCache;
 import com.watabou.noosa.Camera;
 import com.watabou.noosa.Gizmo;
-import com.watabou.noosa.NoosaScript;
 import com.watabou.noosa.Scene;
 import com.watabou.pixeldungeon.scenes.InterlevelScene;
+import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.utils.SystemTime;
 
 import org.luaj.vm2.LuaError;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.SneakyThrows;
@@ -37,7 +37,7 @@ public class GameLoop {
     public static final AtomicInteger loadingOrSaving = new AtomicInteger();
     public static final Object stepLock = new Object();
 
-    public static final Object stepLock = new Object();
+
     public static final double[] MOVE_TIMEOUTS = new double[]{250, 500, 1000, 2000, 5000, 10000, 30000, 60000, Double.POSITIVE_INFINITY };
 
     public static String version = Utils.EMPTY_STRING;
@@ -47,13 +47,12 @@ public class GameLoop {
     public static int width;
     public static int height;
 
+    @SuppressWarnings("unused")
     public static volatile boolean softPaused = false;
 
-    private final Executor executor = new ReportingExecutor();
-    private final Executor stepExecutor = new ReportingExecutor();
-    public final Executor soundExecutor = new ReportingExecutor();
-
-    public Executor serviceExecutor = new ReportingExecutor();
+    private final ReportingExecutor stepExecutor = new ReportingExecutor();
+    private final ReportingExecutor executor = new ReportingExecutor();
+    public ReportingExecutor soundExecutor = new ReportingExecutor();
 
     private final ConcurrentLinkedQueue<Runnable> uiTasks = new ConcurrentLinkedQueue<>();
 
@@ -82,7 +81,7 @@ public class GameLoop {
     public Runnable doOnResume;
 
     // Accumulated touch events
-    public final ConcurrentLinkedQueue<MotionEvent> motionEvents = new ConcurrentLinkedQueue<>();
+    public final ConcurrentLinkedQueue<PointerEvent> motionEvents = new ConcurrentLinkedQueue<>();
 
     // Accumulated key events
     public final ConcurrentLinkedQueue<KeyEvent> keysEvents = new ConcurrentLinkedQueue<>();
@@ -102,8 +101,8 @@ public class GameLoop {
         instance().uiTasks.add(task);
     }
 
-    static public void stepExecute(Runnable task) {
-        instance().stepExecutor.execute(task);
+    static public Future<?> stepExecute(Runnable task) {
+        return instance().stepExecutor.submit(task);
     }
 
     static public void execute(Runnable task) {
@@ -111,8 +110,8 @@ public class GameLoop {
     }
 
     public static void setNeedSceneRestart() {
-            if (!(instance().scene instanceof InterlevelScene)) {
-                instance().requestedReset = true;
+        if (!(instance().scene instanceof InterlevelScene)) {
+            instance().requestedReset = true;
         }
     }
 
@@ -160,51 +159,10 @@ public class GameLoop {
         switchScene(instance().sceneClass);
     }
 
-<<<<<<<<< Temporary merge branch 1
-    public static boolean smallResScreen() {
-        return width() <= 320 && height() <= 320;
-    }
-
-    public static int width() {
-        return width;
-    }
-
-    public static void width(int width) {
-        GameLoop.width = width;
-    }
-
-    public static int height() {
-        return height;
-    }
-
-    public static void height(int height) {
-        GameLoop.height = height;
-    }
-
-    public static boolean isAlpha() {
-        return version.contains("alpha") || version.contains("in_dev");
-    }
-
-    public static boolean isDev() {
-        return version.contains("in_dev");
-    }
-
-    public static void switchNoFade(Class<? extends PixelScene> c) {
-        PixelScene.noFade = true;
-        switchScene(c);
-=========
     static public void runOnMainThread(Runnable runnable) {
         pushUiTask(() -> {
             Game.instance().runOnUiThread(runnable);
         });
->>>>>>>>> Temporary merge branch 2
-    }
-
-    public void shutdown() {
-        if (instance().scene != null) {
-            instance().scene.pause();
-            instance().scene.destroy();
-        }
     }
 
     public void onResume() {
@@ -216,11 +174,14 @@ public class GameLoop {
         SystemText.invalidate();
         TextureCache.clear();
 
-        Music.INSTANCE.resume();
+        MusicManager.INSTANCE.enable(GamePreferences.music());
+        MusicManager.INSTANCE.resume();
+
+        Sample.INSTANCE.enable(GamePreferences.soundFx());
         Sample.INSTANCE.resume();
 
         if (doOnResume != null) {
-            GameLoop.pushUiTask(() -> {
+            GameLoop.pushUiTask( () -> {
                         doOnResume.run();
                         doOnResume = null;
                     }
@@ -232,7 +193,7 @@ public class GameLoop {
     public void onFrame() {
         SystemTime.tick();
         long rightNow = SystemTime.now();
-        step = Math.min((now == 0 ? 0 : rightNow - now), 250);
+        step = Math.min((now == 0 ? 0 : rightNow - now),250);
         now = rightNow;
 
         framesSinceInit++;
@@ -244,21 +205,6 @@ public class GameLoop {
                     task.run();
                 }
 
-<<<<<<<<< Temporary merge branch 1
-        if (framesSinceInit>2) {
-            Runnable task;
-            while ((task = uiTasks.poll()) != null) {
-                task.run();
-            }
-
-            if (!softPaused) {
-                try {
-                    step();
-                } catch (LuaError e) {
-                    throw ModdingMode.modException(e);
-                } catch (Exception e) {
-                    throw new TrackedRuntimeException(e);
-=========
                 if (!Game.softPaused && loadingOrSaving.get() == 0) {
                     try {
                         if (requestedReset) {
@@ -266,15 +212,6 @@ public class GameLoop {
                             switchScene(sceneClass.newInstance());
                             return;
                         }
-
-                        while (!motionEvents.isEmpty()) {
-                            Touchscreen.processEvent(motionEvents.poll());
-                        }
-
-                        while (!keysEvents.isEmpty()) {
-                            Keys.processEvent(keysEvents.poll());
-                        }
-
                     } catch (LuaError e) {
                         throw ModdingMode.modException(e);
                     } catch (Exception e) {
@@ -285,11 +222,14 @@ public class GameLoop {
         }
 
         if (framesSinceInit > 2 && !Game.softPaused && loadingOrSaving.get() == 0) {
-            stepExecutor.execute(this::step);
+            stepExecutor.execute(() -> {
+                update();
+            });
         }
 
         NoosaScript.get().resetCamera();
         Gl.clear();
+        Gl.flush();
 
         synchronized (stepLock) {
             if (scene != null) {
@@ -299,14 +239,27 @@ public class GameLoop {
     }
 
     @SneakyThrows
-    public void step() {
+    public void update() {
         synchronized (stepLock) {
+
+            Keys.processEvent(new KeyEvent(Keys.Key.BEGIN_OF_FRAME, KeyEvent.ACTION_DOWN));
+
+            while (!motionEvents.isEmpty()) {
+                Touchscreen.processEvent(motionEvents.poll());
+            }
+
+            while (!keysEvents.isEmpty()) {
+                Keys.processEvent(keysEvents.poll());
+            }
+
+            Keys.processEvent(new KeyEvent(Keys.Key.END_OF_FRAME, KeyEvent.ACTION_DOWN));
+
             elapsed = timeScale * step * 0.001f;
             if (scene != null) {
                 scene.update();
             }
             Camera.updateAll();
-        }
+       }
     }
 
     private void switchScene(Scene requestedScene) {
@@ -316,12 +269,12 @@ public class GameLoop {
         Camera.reset();
 
         if (scene != null) {
-            EventCollector.setSessionData("pre_scene", scene.getClass().getSimpleName());
+            EventCollector.setSessionData("pre_scene",scene.getClass().getSimpleName());
             scene.destroy();
         }
         scene = requestedScene;
         scene.create();
-        EventCollector.setSessionData("scene", scene.getClass().getSimpleName());
+        EventCollector.setSessionData("scene",scene.getClass().getSimpleName());
 
         elapsed = 0f;
         timeScale = 1f;

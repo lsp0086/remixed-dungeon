@@ -30,7 +30,10 @@ public class Group extends Gizmo {
 	static int nullGizmo;
 
 	@NotNull
-	protected ArrayList<Gizmo> members = new ArrayList<>();
+	protected final ArrayList<Gizmo> members = new ArrayList<>();
+
+	private boolean sorted = false;
+	public boolean sort = false;
 
 	public Group() {
 	}
@@ -43,6 +46,9 @@ public class Group extends Gizmo {
 
 	@Override
 	public void update() {
+		if (sort && !sorted) {
+			sort();
+		}
 		//members.removeAll(Collections.singleton(null));
 		//members.removeIf(Objects::isNull); needs Android N
 		for (int i = 0; i < members.size(); i++) {
@@ -92,9 +98,21 @@ public class Group extends Gizmo {
 
 		members.add(g);
 		g.setParent(this);
+		sorted = false;
 		return g;
 	}
 
+	public Gizmo addAfter(Gizmo g, Gizmo after) {
+		int i = members.indexOf(after);
+		if (i == -1) {
+			return add(g);
+		} else {
+			members.add(i + 1, g);
+			g.setParent(this);
+			sorted = false;
+			return g;
+		}
+	}
 	@SneakyThrows
 	public Gizmo recycle(@NotNull Class<? extends Gizmo> c) {
 
@@ -111,6 +129,7 @@ public class Group extends Gizmo {
 		if (members.remove(g)) {
 			g.setNullParent();
 		}
+		sorted = false;
 	}
 
 	public void removeAll() {
@@ -175,9 +194,11 @@ public class Group extends Gizmo {
 		return members.get(i);
 	}
 
+	/** @noinspection ComparatorCombinators*/
 	public void sort() {
 		members.removeAll(Collections.singleton(null));
 		Collections.sort(members, (a,b)-> a.layer - b.layer);
+		sorted = true;
 	}
 
 	//Testing stuff
@@ -185,7 +206,7 @@ public class Group extends Gizmo {
 	public int findByClass(@NotNull Class<? extends Object> c, int offset) {
 		for (int i = offset; i < getLength(); i++) {
 			Gizmo g = members.get(i);
-			if (c.isAssignableFrom(g.getClass())) {
+			if (g.isActive() && c.isAssignableFrom(g.getClass())) {
 				return i;
 			}
 		}

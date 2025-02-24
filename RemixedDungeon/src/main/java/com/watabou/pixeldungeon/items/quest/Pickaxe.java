@@ -8,7 +8,6 @@ import com.nyrds.platform.util.StringsManager;
 import com.watabou.pixeldungeon.Assets;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.buffs.Hunger;
-import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.actors.mobs.Bat;
 import com.watabou.pixeldungeon.effects.CellEmitter;
 import com.watabou.pixeldungeon.effects.Speck;
@@ -20,7 +19,6 @@ import com.watabou.pixeldungeon.levels.Terrain;
 import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.sprites.Glowing;
 import com.watabou.pixeldungeon.sprites.ItemSpriteSheet;
-import com.watabou.pixeldungeon.ui.BuffIndicator;
 import com.watabou.pixeldungeon.ui.QuickSlot;
 import com.watabou.pixeldungeon.utils.GLog;
 
@@ -49,7 +47,15 @@ public class Pickaxe extends Weapon {
 
 	@Packable
 	public boolean bloodStained = false;
-	
+
+	@Override
+	public boolean getBoolean(String key) {
+		if (key.equals("bloodStained"))
+			return bloodStained;
+
+		return super.getBoolean(key);
+	}
+
 	@Override
 	public ArrayList<String> actions(Char hero ) {
 		ArrayList<String> actions = super.actions( hero );
@@ -84,15 +90,9 @@ public class Pickaxe extends Weapon {
 					GameScene.updateMap( pos );
 
 					DarkGold gold = new DarkGold();
-					if (gold.doPickUp( chr )) {
-						GLog.i( Hero.getHeroYouNowHave(), gold.name() );
-					} else {
-						gold.doDrop(chr);
-					}
+					chr.collectAnimated(gold);
 
 					chr.hunger().satisfy( -Hunger.STARVING / 10 );
-					BuffIndicator.refreshHero();
-
 					return;
 				}
 			}

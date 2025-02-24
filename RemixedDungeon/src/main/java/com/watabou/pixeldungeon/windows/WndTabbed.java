@@ -1,6 +1,7 @@
 
 package com.watabou.pixeldungeon.windows;
 
+import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.platform.game.Game;
 import com.watabou.pixeldungeon.Chrome;
 import com.watabou.pixeldungeon.ui.Window;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 
 public class WndTabbed extends Window {
 
-    protected ArrayList<Tab> tabs = new ArrayList<>();
+    protected final ArrayList<Tab> tabs = new ArrayList<>();
     protected Tab selected;
 
     public WndTabbed() {
@@ -20,7 +21,7 @@ public class WndTabbed extends Window {
 
     protected Tab add(Tab tab) {
 
-        tab.setPos(tabs.size() == 0 ?
+        tab.setPos(tabs.isEmpty() ?
                 -chrome.marginLeft() + 1 :
                 tabs.get(tabs.size() - 1).right(), height);
         tab.select(false);
@@ -60,8 +61,8 @@ public class WndTabbed extends Window {
                 height + chrome.marginVer());
 
         camera.resize((int) chrome.width, chrome.marginTop() + height + tabHeight());
-        camera.x = (int) (Game.width() - camera.screenWidth()) / 2;
-        camera.y = (int) (Game.height() - camera.screenHeight()) / 2;
+        camera.x = (int) (GameLoop.width - camera.screenWidth()) / 2;
+        camera.y = (int) (GameLoop.height - camera.screenHeight()) / 2;
         // <- super.resize(...)
 
         for (Tab tab : tabs) {

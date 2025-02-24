@@ -8,7 +8,7 @@ import com.watabou.noosa.ui.Button;
 import com.watabou.pixeldungeon.Assets;
 
 public class TextButton extends Button {
-	protected NinePatch bg;
+	public NinePatch bg;
 	protected Text text;
 	protected Image icon;
 	
@@ -24,9 +24,12 @@ public class TextButton extends Button {
 		bg.setX(x);
 		bg.setY(y);
 		bg.size( width, height );
-		
+
+
 		text.setX(x + (int)(width - text.width()) / 2);
-		text.setY(y + (int)(height - Math.max(text.height(),text.baseLine())) / 2);
+		text.setY(y + (int)(height - text.height()) / 2);
+
+		//PUtil.slog("TextButton", "text: " + text.text() + " x: " + text.getX() + " y: " + text.getY() + " width: " + text.width() + " height: " + text.height());
 
 		if (icon != null) {
 			icon.setX(x + text.getX() - icon.width() - 2);

@@ -1,5 +1,6 @@
 package com.nyrds.pixeldungeon.mobs.common;
 
+import com.nyrds.Packable;
 import com.nyrds.pixeldungeon.mobs.necropolis.UndeadMob;
 import com.watabou.pixeldungeon.actors.Char;
 
@@ -9,11 +10,13 @@ import com.watabou.pixeldungeon.actors.Char;
 public class Deathling extends UndeadMob {
 
     private static final int HEALTH = 4;
+    @Packable
     private boolean firstAct = true;
 
     public Deathling(){
         hp(ht(HEALTH));
 
+        carcassChance = 0;
         flying = true;
 
         expForKill = 0;

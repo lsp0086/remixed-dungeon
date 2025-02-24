@@ -3,17 +3,23 @@ package com.watabou.pixeldungeon.scenes;
 
 import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.pixeldungeon.game.GamePreferences;
+import com.nyrds.pixeldungeon.ml.BuildConfig;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.support.PlayGames;
 import com.nyrds.pixeldungeon.windows.VBox;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.pixeldungeon.windows.WndLocalModInstall;
+import com.nyrds.platform.EventCollector;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.game.Game;
+import com.nyrds.platform.game.InstallMod;
 import com.nyrds.platform.game.RemixedDungeon;
+import com.nyrds.platform.storage.AndroidSAF;
+import com.nyrds.platform.util.Os;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.GuiProperties;
-import com.nyrds.util.Util;
+import com.nyrds.util.ModdingBase;
+import com.nyrds.util.ModdingMode;
 import com.watabou.noosa.Camera;
-import com.watabou.noosa.Gizmo;
 import com.watabou.noosa.Image;
 import com.watabou.noosa.Text;
 import com.watabou.pixeldungeon.Assets;
@@ -31,6 +37,9 @@ import com.watabou.pixeldungeon.ui.PrefsButton;
 import com.watabou.pixeldungeon.ui.PremiumPrefsButton;
 import com.watabou.pixeldungeon.ui.StatisticsButton;
 import com.watabou.pixeldungeon.utils.Utils;
+import com.watabou.pixeldungeon.windows.WndModInfo;
+
+import org.luaj.vm2.LuaError;
 
 public class TitleScene extends PixelScene {
 
@@ -43,8 +52,7 @@ public class TitleScene extends PixelScene {
     public void create() {
         super.create();
 
-        Music.INSTANCE.play(Assets.THEME, true);
-        Music.INSTANCE.volume(1f);
+        MusicManager.INSTANCE.play(Assets.THEME, true);
 
         uiCamera.setVisible(false);
 
@@ -128,12 +136,12 @@ public class TitleScene extends PixelScene {
         archs.setSize(w, h);
         sendToBack(archs);
 
-        Text version = Text.createBasicText(Game.version, font1x);
+        Text version = Text.createBasicText(GameLoop.version, font1x);
         version.hardlight(0x888888);
         version.setPos(w - version.width(), h - version.height());
         add(version);
 
-        float freeInternalStorage = Util.getAvailableInternalMemorySize();
+        float freeInternalStorage = Os.getAvailableInternalMemorySize();
 
         if (freeInternalStorage < 2) {
             Text lowInternalStorageWarning = PixelScene
@@ -157,22 +165,35 @@ public class TitleScene extends PixelScene {
         }
 
         String lang = GamePreferences.uiLanguage();
-        final boolean useVk = lang.equals("ru");
+        final boolean ruUser = lang.equals("ru");
 
-        Icons social = useVk ? Icons.VK : Icons.FB;
-        leftGroup.add(new ImageButton(social.get()) {
-            @Override
-            protected void onClick() {
-                Game.instance().openUrl("Visit us on social network", useVk ? "https://vk.com/pixel_dungeon_remix" : "https://fb.me/RemixedDungeon");
-            }
-        });
+        Icons social = ruUser ? Icons.VK : Icons.FB;
+        if (ruUser) {
+            leftGroup.add(new ImageButton(social.get()) {
+                @Override
+                protected void onClick() {
+                    Game.openUrl("Visit us on social network", ruUser ? "https://vk.com/pixel_dungeon_remix" : "https://fb.me/RemixedDungeon");
+                }
+            });
+        }
 
-        leftGroup.add(new ImageButton(Icons.DISCORD.get()) {
-            @Override
-            protected void onClick() {
-                Game.instance().openUrl("Let talk on Discord", "https://discord.gg/AMXrhQZ");
-            }
-        });
+        if(!ruUser) {
+            leftGroup.add(new ImageButton(Icons.DISCORD.get()) {
+                @Override
+                protected void onClick() {
+                    Game.openUrl("Let talk on Discord", "https://discord.gg/AMXrhQZ");
+                }
+            });
+        }
+
+        if(!BuildConfig.FLAVOR_market.equals("vkplay")) {
+            leftGroup.add(new ImageButton(Icons.TG.get()) {
+                @Override
+                protected void onClick() {
+                    Game.openUrl("Join our Telegram group", "https://t.me/RemixedDungeon");
+                }
+            });
+        }
 
         Image img = new Image(Assets.DASHBOARD, DashboardItem.IMAGE_SIZE, 1);
 
@@ -194,8 +215,8 @@ public class TitleScene extends PixelScene {
         btnExit.setPos(w - btnExit.width(), 0);
         add(btnExit);
 
-        if (GamePreferences.version() != Game.versionCode) {
-            if (Utils.differentVersions(GamePreferences.versionString(), Game.version)) {
+        if (GamePreferences.version() != GameLoop.versionCode) {
+            if (Utils.differentVersions(GamePreferences.versionString(), GameLoop.version)) {
                 changelogUpdated = true;
             }
         }
@@ -205,13 +226,33 @@ public class TitleScene extends PixelScene {
 
         add(btnChangelog);
 
-        StatisticsButton btnStats = new StatisticsButton();
-        btnStats.setPos(w - btnStats.width(), btnChangelog.bottom() + 2);
-        add(btnStats);
+        if(Utils.isAndroid()) {
+            StatisticsButton btnStats = new StatisticsButton();
+            btnStats.setPos(w - btnStats.width(), btnChangelog.bottom() + 2);
+            add(btnStats);
+        }
 
         Dungeon.reset();
 
         fadeIn();
+
+        if(Utils.isAndroid()) {
+            if (AndroidSAF.mBaseSrcPath != null) {
+                GameLoop.pushUiTask(() -> WndLocalModInstall.onDirectoryPicked());
+            }
+
+            if (AndroidSAF.mBaseDstPath != null) {
+                GameLoop.pushUiTask(() -> WndModInfo.onDirectoryPicked());
+            }
+
+
+            if (Game.instance() instanceof InstallMod) {
+                GameLoop.pushUiTask(() -> {
+                    ((InstallMod) Game.instance()).installMod();
+                });
+            }
+        }
+
     }
 
     private double time = 0;
@@ -219,14 +260,25 @@ public class TitleScene extends PixelScene {
 
     @Override
     public void update() {
-        super.update();
+        try {
+            super.update();
+        } catch (LuaError e) {
+            EventCollector.logException(e, "TitleScene lua error");
+            ModdingMode.selectMod(ModdingBase.REMIXED);
+            RemixedDungeon.instance().doRestart();
+        }
+
         time += GameLoop.elapsed;
         float cl = (float) Math.sin(time) * 0.5f + 0.5f;
         if (!donationAdded) {
+
             if (RemixedDungeon.canDonate()) {
                 add(pleaseSupport);
                 add(btnDonate);
+            } else {
+                btnDonate.enable(false);
             }
+
             donationAdded = true;
         } else {
             pleaseSupport.hardlight(cl, cl, cl);

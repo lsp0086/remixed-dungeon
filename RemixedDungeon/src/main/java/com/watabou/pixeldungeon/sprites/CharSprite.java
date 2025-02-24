@@ -65,6 +65,7 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
 
     @Nullable
     protected Image avatar;
+    protected Image carcass;
 
 
     private Glowing glowing = Glowing.NO_GLOWING;
@@ -95,7 +96,7 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
     protected Animation zap;
     protected Animation die;
 
-    protected Map<String,Animation> extras = new HashMap<>();
+    protected final Map<String,Animation> extras = new HashMap<>();
 
     private Callback animCallback;
 
@@ -132,6 +133,8 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
         ch = WeakOptional.of(owner);
 
         ch.ifPresent(chr -> {
+                    layer = owner.getSpriteLayer();
+
                     place(chr.getPos());
                     turnTo(chr.getPos(), Random.Int(chr.level().getLength()));
 
@@ -188,7 +191,9 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
     }
 
     public void idle() {
-        play(idle);
+        if(curAnim==null || curAnim==run) {
+            play(idle);
+        }
     }
 
     @LuaInterface
@@ -303,6 +308,7 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
     }
 
     public void die() {
+        glowing = Glowing.NO_GLOWING;
         sleeping = false;
         play(die);
 
@@ -492,6 +498,10 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
 
             if (controlled && visible) {
                 showMindControl(chr);
+            } else {
+                if (emo instanceof EmoIcon.Controlled) {
+                    removeEmo();
+                }
             }
 
             if (emo != null) {
@@ -525,7 +535,7 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
 
             int chrPos = chr.getPos();
             if(!isMoving && cellIndex!= chrPos) {
-                EventCollector.logEvent(Utils.format("CharSprite desync %s (%d not %d)", chr.getEntityKind(), cellIndex, chrPos));
+                EventCollector.logException(Utils.format("CharSprite desync %s (%d not %d)", chr.getEntityKind(), cellIndex, chrPos));
                 place(chrPos);
             }
         });
@@ -679,12 +689,20 @@ public class CharSprite extends CompositeMovieClip implements Tweener.Listener, 
 
     public Image avatar() {
 
-        if (avatar == null) {
+        if (avatar == null || !avatar.alive) {
             avatar = snapshot(idle.frames[0]);
             avatar.setScale(charScale);
         }
 
         return avatar;
+    }
+
+    public Image carcass() {
+        if (carcass == null) {
+            carcass = snapshot(die.frames[die.frames.length - 1]);
+            carcass.setScale(charScale);
+        }
+        return carcass;
     }
 
     private void resetIfNotDying(){

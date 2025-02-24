@@ -28,13 +28,13 @@ public class GameButton extends RedButton {
     protected void layout() {
         super.layout();
 
-        if (secondary.text().length() > 0) {
+        if (!secondary.text().isEmpty()) {
             text.setY(PixelScene.align(y
                     + (height - text.height() - secondary.height())
                     / 2));
 
             secondary.setX(PixelScene.align(x + (width - secondary.width()) / 2));
-            secondary.setY(PixelScene.align(text.getY() + text.height()));
+            secondary.setY(PixelScene.align(text.getY() + text.height()+2));
         } else {
             text.setY(PixelScene.align(y + (height - text.height()) / 2));
         }

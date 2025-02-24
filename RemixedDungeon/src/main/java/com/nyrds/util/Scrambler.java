@@ -1,7 +1,9 @@
 package com.nyrds.util;
 
+import com.nyrds.platform.util.UserKey;
+
 public class Scrambler {
-	static private int k = 0xAAAAAAAA;
+	static private final int k = 0xAAAAAAAA;
 
 	
 	static public int scramble(int in) {

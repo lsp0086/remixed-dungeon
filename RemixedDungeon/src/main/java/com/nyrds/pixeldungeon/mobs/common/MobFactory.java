@@ -59,6 +59,7 @@ import com.nyrds.pixeldungeon.mobs.spiders.SpiderServant;
 import com.nyrds.platform.util.TrackedRuntimeException;
 import com.nyrds.util.JsonHelper;
 import com.nyrds.util.ModdingMode;
+import com.watabou.noosa.Image;
 import com.watabou.pixeldungeon.Challenges;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.actors.mobs.Acidic;
@@ -101,6 +102,7 @@ import com.watabou.pixeldungeon.actors.mobs.npcs.Ghost;
 import com.watabou.pixeldungeon.actors.mobs.npcs.Ghost.FetidRat;
 import com.watabou.pixeldungeon.actors.mobs.npcs.Hedgehog;
 import com.watabou.pixeldungeon.actors.mobs.npcs.Imp;
+import com.watabou.pixeldungeon.actors.mobs.npcs.MirrorImage;
 import com.watabou.pixeldungeon.actors.mobs.npcs.RatKing;
 import com.watabou.pixeldungeon.actors.mobs.npcs.Shopkeeper;
 import com.watabou.pixeldungeon.actors.mobs.npcs.WandMaker;
@@ -260,6 +262,7 @@ public class MobFactory {
 		registerMobClass(Shopkeeper.class);
 		registerMobClass(TownShopkeeper.class);
 		registerMobClass(SpiritOfPain.class);
+		registerMobClass(MirrorImage.class);
 
 		mMobsList.put("Sheep", WandOfFlock.Sheep.class);
 		//old mods compatibility
@@ -300,6 +303,10 @@ public class MobFactory {
 		var mob = mobByName(selectedMobClass);
 		mob.fromJson(JsonHelper.readJsonFromString(jsonDesc));
 		return mob;
+	}
+
+	public static Image avatar(String kind)  {
+		return MobFactory.mobByName(kind).newSprite().avatar();
 	}
 
 	public static List<Mob> allMobs() {

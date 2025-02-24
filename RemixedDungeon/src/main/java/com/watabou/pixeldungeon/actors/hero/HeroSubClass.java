@@ -9,6 +9,7 @@ import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.JsonHelper;
 import com.nyrds.util.ModdingMode;
+import com.watabou.noosa.Image;
 import com.watabou.pixeldungeon.Assets;
 import com.watabou.pixeldungeon.actors.Char;
 import com.watabou.pixeldungeon.actors.buffs.Buff;
@@ -27,7 +28,6 @@ import com.watabou.pixeldungeon.ui.QuickSlot;
 import com.watabou.utils.Bundle;
 import com.watabou.utils.Random;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Collections;
@@ -71,7 +71,7 @@ public enum HeroSubClass implements CharModifier {
 				JsonHelper.readStringSet(classDesc, Char.IMMUNITIES,immunities);
 				JsonHelper.readStringSet(classDesc, Char.RESISTANCES,resistances);
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			throw ModdingMode.modException("bad InitHero.json",e);
 		}
 	}
@@ -88,8 +88,8 @@ public enum HeroSubClass implements CharModifier {
 
 	public void storeInBundle( Bundle bundle ) {
 		bundle.put( SUBCLASS, toString() );
-		bundle.put(toString()+Char.IMMUNITIES,immunities.toArray(new String[0]));
-		bundle.put(toString()+Char.RESISTANCES,resistances.toArray(new String[0]));
+		bundle.put(this +Char.IMMUNITIES,immunities.toArray(new String[0]));
+		bundle.put(this +Char.RESISTANCES,resistances.toArray(new String[0]));
 	}
 
 	public static HeroSubClass restoreFromBundle(Bundle bundle) {
@@ -276,6 +276,11 @@ public enum HeroSubClass implements CharModifier {
 	@Override
 	public String textureLarge() {
 		return Assets.BUFFS_LARGE;
+	}
+
+	@Override
+	public Image smallIcon() {
+		return null;
 	}
 
 	@Override

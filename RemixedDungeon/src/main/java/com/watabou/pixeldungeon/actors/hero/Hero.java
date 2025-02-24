@@ -21,7 +21,7 @@ import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.game.Game;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.util.StringsManager;
-import com.nyrds.util.ModdingMode;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.Scrambler;
 import com.watabou.noosa.Camera;
 import com.watabou.pixeldungeon.Assets;
@@ -29,7 +29,6 @@ import com.watabou.pixeldungeon.Badges;
 import com.watabou.pixeldungeon.Bones;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.Facilitations;
-import com.watabou.pixeldungeon.GamesInProgress;
 import com.watabou.pixeldungeon.Statistics;
 import com.watabou.pixeldungeon.actors.Actor;
 import com.watabou.pixeldungeon.actors.Char;
@@ -75,7 +74,6 @@ import com.watabou.pixeldungeon.scenes.InterlevelScene;
 import com.watabou.pixeldungeon.sprites.CharSprite;
 import com.watabou.pixeldungeon.sprites.HeroSpriteDef;
 import com.watabou.pixeldungeon.ui.AttackIndicator;
-import com.watabou.pixeldungeon.ui.BuffIndicator;
 import com.watabou.pixeldungeon.ui.QuickSlot;
 import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.pixeldungeon.windows.WndResurrect;
@@ -88,6 +86,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -102,6 +101,8 @@ public class Hero extends Char {
 
     @Nullable
     static public Runnable doOnNextAction;
+
+    public Set<Mob> initialAlies = new HashSet<>();
 
     private HeroClass heroClass = HeroClass.ROGUE;
     private HeroSubClass subClass = HeroSubClass.NONE;
@@ -176,7 +177,7 @@ public class Hero extends Char {
 
     private static final String STRENGTH = "STR";
     private static final String EXPERIENCE = "exp";
-    private static final String DIFFICULTY = "difficulty";
+    public static final String DIFFICULTY = "difficulty";
     private static final String SP = "sp";
     private static final String MAX_SP = "maxsp";
     private static final String MAGIC_LEVEL = "magicLvl";
@@ -228,10 +229,6 @@ public class Hero extends Char {
         return heroClass.getGender();
     }
 
-    public static void preview(GamesInProgress.Info info, Bundle bundle) {
-        info.level = bundle.getInt(LEVEL);
-    }
-
     public String className() {
         return subClass == null || subClass == HeroSubClass.NONE ? heroClass.title() : subClass.title();
     }
@@ -267,10 +264,6 @@ public class Hero extends Char {
         return (int) (super.attackSkill(target) * attackSkillFactor);
     }
 
-    @Override
-    public void spend(float time) {
-        super.spend(time);
-    }
 
     @Override
     public int dr() {
@@ -301,7 +294,7 @@ public class Hero extends Char {
             super.act();
         }
 
-        Dungeon.observe();
+        observe();
 
         if (paralysed) {
             setCurAction(null);
@@ -386,7 +379,7 @@ public class Hero extends Char {
                     || (item instanceof PotionOfStrength && ((PotionOfStrength) item).isKnown())) {
                 GLog.p(StringsManager.getVar(R.string.Hero_YouNowHave), item.name());
             } else {
-                GLog.i(getHeroYouNowHave(), item.name());
+                GLog.i(StringsManager.getVar(R.string.Hero_YouNowHave), item.name() );
             }
         }
     }
@@ -406,8 +399,13 @@ public class Hero extends Char {
 
     @Override
     public void damage(int dmg, @NotNull NamedEntityKind src) {
+        if (!isAlive()) {
+            return;
+        }
+
         restoreHealth = false;
         super.damage(dmg, src);
+
 
         setControlTarget(this);
 
@@ -435,129 +433,6 @@ public class Hero extends Char {
 
         AttackIndicator.updateState(this);
         return newMob;
-    }
-
-    public boolean getCloser(final int target) {
-
-        if (hasBuff(BuffFactory.ROOTS)) {
-            return false;
-        }
-
-        int step = -1;
-
-        Level level = level();
-
-        Buff wallWalkerBuff = null;
-
-        if (!level.isBossLevel()) {
-            wallWalkerBuff = buff(BuffFactory.RING_OF_STONE_WALKING);
-        }
-
-        if (level.adjacent(getPos(), target)) {
-
-            if (Actor.findChar(target) == null) {
-                if (!hasBuff(BuffFactory.BLINDNESS)) {
-                    if (level.pit[target] && !isFlying() && !Chasm.jumpConfirmed) {
-                        Chasm.heroJump(this);
-                        interrupt();
-                        return false;
-                    }
-                    if (TrapHelper.isVisibleTrap(level, target) && !isFlying() && !TrapHelper.stepConfirmed) {
-                        TrapHelper.heroTriggerTrap(this);
-                        interrupt();
-                        return false;
-                    }
-                }
-
-                if (wallWalkerBuff == null && (level.passable[target] || level.avoid[target])) {
-                    step = target;
-                }
-                if (wallWalkerBuff != null && level.solid[target]) {
-                    step = target;
-                }
-
-                LevelObject obj = level.getTopLevelObject(target);
-
-                if (obj != null && obj.pushable(this)) {
-
-                    if (obj.pushable(this)) {
-                        interrupt();
-                        if (!obj.push(this)) {
-                            return false;
-                        }
-                    }
-
-                    if (obj.nonPassable(this)) {
-                        interrupt();
-                        return false;
-                    }
-                }
-            }
-
-        } else {
-
-            int len = level.getLength();
-            boolean[] p = wallWalkerBuff != null ? level.solid : level.passable;
-            boolean[] v = level.visited;
-            boolean[] m = level.mapped;
-            boolean[] passable = new boolean[len];
-            for (int i = 0; i < len; i++) {
-                passable[i] = p[i] && (v[i] || m[i]);
-            }
-
-            step = Dungeon.findPath(this, target, passable, level.fieldOfView);
-        }
-
-        if (level.cellValid(step)) {
-
-            int oldPos = getPos();
-
-            LevelObject obj = level.getTopLevelObject(step);
-            if (obj != null) {
-
-                if (obj.nonPassable(this)) {
-                    interrupt();
-                    return false;
-                }
-
-                if (step == target) {
-                    interrupt();
-                    if (!obj.interact(this)) {
-                        return false;
-                    }
-                } else {
-                    if (!obj.stepOn(this)) {
-                        interrupt();
-                        return false;
-                    }
-                }
-            }
-
-            Char actor = Actor.findChar(step);
-            if (actor instanceof Mob) {
-                Mob mob = ((Mob) actor);
-                if (actor.friendly(this)) {
-                    if (!mob.swapPosition(this)) {
-                        return false;
-                    }
-                    Dungeon.observe();
-                }
-            }
-
-            move(step);
-            moveSprite(oldPos, getPos());
-
-            if (wallWalkerBuff != null) {
-                int dmg = Math.max(hp() / 2, 2);
-                damage(dmg, wallWalkerBuff);
-            }
-
-            spend(1 / speed());
-
-            return true;
-        }
-
-        return false;
     }
 
     @Override
@@ -603,7 +478,7 @@ public class Hero extends Char {
 
         this.setExp(this.getExpForLevelUp() + exp);
 
-        showStatus(CharSprite.POSITIVE, TXT_EXP, exp);
+        showStatus_a(CharSprite.POSITIVE, TXT_EXP, exp);
 
         boolean levelUp = false;
 
@@ -665,7 +540,7 @@ public class Hero extends Char {
     public boolean add(Buff buff) {
         super.add(buff);
 
-        if (!GameScene.isSceneReady()) {
+        if (!isOnStage()) {
             return false;
         }
 
@@ -700,15 +575,7 @@ public class Hero extends Char {
             interrupt();
         }
 
-        BuffIndicator.refreshHero();
         return true;
-    }
-
-    @Override
-    public void remove(@Nullable Buff buff) {
-        super.remove(buff);
-
-        BuffIndicator.refreshHero();
     }
 
     @Override
@@ -723,9 +590,9 @@ public class Hero extends Char {
         deathDesc.put("duration", Float.toString(Statistics.duration));
 
         deathDesc.put("difficulty", Integer.toString(GameLoop.getDifficulty()));
-        deathDesc.put("version", Game.version);
-        deathDesc.put("mod", ModdingMode.activeMod());
-        deathDesc.put("modVersion", Integer.toString(ModdingMode.activeModVersion()));
+        deathDesc.put("version", GameLoop.version);
+        deathDesc.put("mod", ModdingBase.activeMod());
+        deathDesc.put("modVersion", Integer.toString(ModdingBase.activeModVersion()));
 
         deathDesc.put("donation", Integer.toString(GamePreferences.donated()));
         deathDesc.put("heroLevel", Integer.toString(lvl()));
@@ -779,7 +646,7 @@ public class Hero extends Char {
         GameScene.gameOver();
 
         if (cause instanceof Doom) {
-            ((Doom) cause).onDeath();
+            ((Doom) cause).onHeroDeath();
         }
 
         Dungeon.gameOver();
@@ -801,7 +668,7 @@ public class Hero extends Char {
 
     @Override
     public void onMotionComplete() {
-        Dungeon.observe();
+        observe();
         search(false);
 
         super.onMotionComplete();
@@ -943,10 +810,6 @@ public class Hero extends Char {
         return sprite;
     }
 
-    public static String getHeroYouNowHave() {
-        return StringsManager.getVar(R.string.Hero_YouNowHave);
-    }
-
     public int getExpForLevelUp() {
         return Scrambler.descramble(scrambledExp);
     }
@@ -957,7 +820,7 @@ public class Hero extends Char {
 
     @Override
     public void eat(@NotNull Item food, float energy, String message) {
-        food.detach(getBelongings().backpack);
+        food.consumedOneBy(this);
 
         hunger().satisfy(energy);
 
@@ -1032,8 +895,19 @@ public class Hero extends Char {
         return subClass;
     }
 
+    @LuaInterface
+    public void setSubClass(String subClass) { //To conceal strange behavior in RemixedRPG
+        EventCollector.setSessionData("subclass", subClass);
+        EventCollector.logException("RemixedPRG setSubClass bug");
+        try {
+            setSubClass(HeroSubClass.valueOf(subClass));
+        } catch (IllegalArgumentException e) {
+            setSubClass(HeroSubClass.NONE);
+        }
+    }
+
     public void setSubClass(HeroSubClass subClass) {
-        EventCollector.setSessionData("subClass", heroClass.name());
+        EventCollector.setSessionData("subClass", subClass.name());
         this.subClass = subClass;
     }
 
@@ -1114,6 +988,129 @@ public class Hero extends Char {
 
     }
 
+    @Override
+    public boolean getCloser(int target, boolean ignorePets) {
+        if (hasBuff(BuffFactory.ROOTS)) {
+            return false;
+        }
+
+        int step = -1;
+
+        Level level = level();
+
+        Buff wallWalkerBuff = null;
+
+        if (!level.isBossLevel()) {
+            wallWalkerBuff = buff(BuffFactory.RING_OF_STONE_WALKING);
+        }
+
+        if (level.adjacent(getPos(), target)) {
+            if (Actor.findChar(target) == null) {
+                if (!hasBuff(BuffFactory.BLINDNESS)) {
+                    if (level.pit[target] && !isFlying() && !Chasm.jumpConfirmed) {
+                        Chasm.heroJump(this);
+                        interrupt();
+                        return false;
+                    }
+                    if (TrapHelper.isVisibleTrap(level, target) && !isFlying() && !TrapHelper.stepConfirmed) {
+                        TrapHelper.heroTriggerTrap(this);
+                        interrupt();
+                        return false;
+                    }
+                }
+
+                if (wallWalkerBuff == null && (level.passable[target] || level.avoid[target])) {
+                    step = target;
+                }
+                if (wallWalkerBuff != null && level.solid[target]) {
+                    step = target;
+                }
+
+                LevelObject obj = level.getTopLevelObject(target);
+
+                if (obj != null && obj.pushable(this)) {
+
+                    if (obj.pushable(this)) {
+                        interrupt();
+                        if (!obj.push(this)) {
+                            return false;
+                        }
+                    }
+
+                    if (obj.nonPassable(this)) {
+                        interrupt();
+                        return false;
+                    }
+                }
+            }
+
+        } else {
+
+            int len = level.getLength();
+            boolean[] p = wallWalkerBuff != null ? level.solid : level.passable;
+            boolean[] v = level.visited;
+            boolean[] m = level.mapped;
+            boolean[] passable = new boolean[len];
+            for (int i = 0; i < len; i++) {
+                passable[i] = p[i] && (v[i] || m[i]);
+            }
+
+            step = Dungeon.findPath(this, target, passable, level.fieldOfView);
+        }
+
+        if (level.cellValid(step)) {
+
+            int oldPos = getPos();
+
+            LevelObject obj = level.getTopLevelObject(step);
+            if (obj != null) {
+
+                if (obj.nonPassable(this)) {
+                    interrupt();
+                    return false;
+                }
+
+                if (step == target) {
+                    interrupt();
+                    if (!obj.interact(this)) {
+                        return false;
+                    }
+                } else {
+                    if (!obj.stepOn(this)) {
+                        interrupt();
+                        return false;
+                    }
+                }
+            }
+
+            Char actor = Actor.findChar(step);
+            if (actor instanceof Mob) {
+                Mob mob = ((Mob) actor);
+                if (actor.friendly(this)) {
+                    if (!mob.swapPosition(this)) {
+                        return false;
+                    }
+                    observe();
+                }
+            }
+
+            move(step);
+            moveSprite(oldPos, getPos());
+
+            if (wallWalkerBuff != null) {
+                int dmg = Math.max(hp() / 2, 2);
+                damage(dmg, wallWalkerBuff);
+            }
+
+            spend(1 / speed());
+
+            return true;
+        }
+
+        return false;
+
+    }
+
     public void skillLevelUp() {
         setSkillLevel(skillLevel() + 1);
     }
@@ -1148,7 +1145,7 @@ public class Hero extends Char {
             newPos.computeCell(level());
             WandOfBlink.appear(this, newPos.cellId);
             level().press(newPos.cellId, this);
-            Dungeon.observe();
+            observe();
         } else {
             InterlevelScene.returnTo = new Position(newPos);
             InterlevelScene.Do(InterlevelScene.Mode.RETURN);
@@ -1186,5 +1183,19 @@ public class Hero extends Char {
 
     public boolean isSpellUser() {
         return !heroClass.getMagicAffinity().isEmpty();
+    }
+
+    @Override
+    public void observe() {
+        Dungeon.observe();
+    }
+
+    @Override
+    public void collectAnimated(@NotNull Item item) {
+        if (item.doPickUp( this )) {
+            itemPickedUp(item);
+        } else {
+            item.doDrop(this);
+        }
     }
 }

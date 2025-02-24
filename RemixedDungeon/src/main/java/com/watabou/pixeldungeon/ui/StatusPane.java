@@ -1,8 +1,7 @@
 
 package com.watabou.pixeldungeon.ui;
 
-import com.nyrds.market.MarketOptions;
-import com.nyrds.platform.game.Game;
+import com.nyrds.pixeldungeon.game.GameLoop;
 import com.nyrds.platform.input.Touchscreen.Touch;
 import com.watabou.noosa.BitmapText;
 import com.watabou.noosa.Camera;
@@ -23,10 +22,11 @@ import com.watabou.pixeldungeon.items.keys.IronKey;
 import com.watabou.pixeldungeon.levels.Level;
 import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.scenes.PixelScene;
+import com.watabou.pixeldungeon.sprites.CharSprite;
 import com.watabou.pixeldungeon.utils.Utils;
-import com.watabou.pixeldungeon.windows.WndGame;
-import com.watabou.pixeldungeon.windows.WndHats;
 import com.watabou.pixeldungeon.windows.WndChar;
+import com.watabou.pixeldungeon.windows.WndHats;
+import com.watabou.pixeldungeon.windows.WndInGameMenu;
 
 public class StatusPane extends Component {
 
@@ -34,9 +34,9 @@ public class StatusPane extends Component {
     private Image     avatar;
     private Emitter   blood;
 
-    private Image hp;
-    private Image sp;
-    private Image exp;
+    private Image hp_img;
+    private Image sp_img;
+    private Image exp_img;
 
     private int lastLvl  = -1;
     private int lastKeys = -1;
@@ -61,6 +61,8 @@ public class StatusPane extends Component {
     private final Level currentLevel;
     private final Char  hero;
 
+    private int ht, hp, sp, st;
+
     public StatusPane(Hero hero, Level level) {
         super(true);
         this.hero = hero;
@@ -77,7 +79,7 @@ public class StatusPane extends Component {
         add(new TouchArea(0, 1, 30, 30) {
             @Override
             protected void onClick(Touch touch) {
-                Image sprite = hero.getSprite();
+                CharSprite sprite = hero.getSprite();
                 if (!sprite.isVisible()) {
                     Camera.main.focusOn(sprite);
                 }
@@ -108,14 +110,14 @@ public class StatusPane extends Component {
         add(compass);
 
 
-        hp = new Image(Assets.HP_BAR);
-        add(hp);
+        hp_img = new Image(Assets.HP_BAR);
+        add(hp_img);
 
-        sp = new Image(Assets.SP_BAR);
-        add(sp);
+        sp_img = new Image(Assets.SP_BAR);
+        add(sp_img);
 
-        exp = new Image(Assets.XP_BAR);
-        add(exp);
+        exp_img = new Image(Assets.XP_BAR);
+        add(exp_img);
 
         hpText = new BitmapText(PixelScene.font1x);
         hpText.hardlight(0x777777);
@@ -149,19 +151,20 @@ public class StatusPane extends Component {
         buffs = new BuffIndicator(hero);
         add(buffs);
 
-        btnMenu = new MenuButton(new Image(Assets.getStatus(), 114, 3, 12, 11), WndGame.class);
+        btnMenu = new MenuButton(new Image(Assets.getStatus(), 114, 3, 12, 11), WndInGameMenu.class);
         add(btnMenu);
 
         btnHats = new MenuButton(new Image(Assets.getStatus(), 114, 18, 12, 11), WndHats.class);
 
+        /*
         if (!MarketOptions.haveHats()) {
             btnHats.enable(false);
-        }
+        }*/
 
         add(btnHats);
 
         verText = new BitmapText(PixelScene.font1x);
-        verText.text(String.valueOf(Game.versionCode-10000));
+        verText.text(String.valueOf(Utils.isAndroid() ? GameLoop.versionCode - 10000 : GameLoop.versionCode));
         verText.hardlight(0xaaaaaa);
         verText.alpha(0.6f);
         verText.setScaleXY(0.5f,0.5f);
@@ -178,11 +181,11 @@ public class StatusPane extends Component {
         compass.setX(avatar.getX() + avatar.width / 2 - compass.origin.x);
         compass.setY(avatar.getY() + avatar.height / 2 - compass.origin.y);
 
-        hp.setX(30);
-        hp.setY(3);
+        hp_img.setX(30);
+        hp_img.setY(3);
 
-        sp.setX(30);
-        sp.setY(9);
+        sp_img.setX(30);
+        sp_img.setY(9);
 
         hpText.setX(30);
         hpText.setY(3.5f);
@@ -224,18 +227,29 @@ public class StatusPane extends Component {
             return;
         }
 
-        int hp = chr.hp();
-        int ht = chr.ht();
+
+        int n_hp = chr.hp();
+        int n_ht = chr.ht();
+
+        if(n_hp != hp || n_ht != ht) {
+            hp = n_hp;
+            ht = n_ht;
+            hpText.text(Utils.format("%d/%d",hp, ht));
+        }
 
         float health =  (float) hp / ht;
 
-        hpText.text(Utils.format("%d/%d",hp, ht));
 
-        int sp = chr.getSkillPoints();
-        int st = chr.getSkillPointsMax();
+        int n_sp = chr.getSkillPoints();
+        int n_st = chr.getSkillPointsMax();
+
+        if(n_sp != sp || n_st != st) {
+            sp = n_sp;
+            st = n_st;
+            manaText.text(Utils.format("%d/%d",sp, st));
+        }
 
         float sPoints = (float) sp / st;
-        manaText.text(Utils.format("%d/%d",sp, st));
 
         if(avatar!=chr.getSprite().avatar()) {
             remove(avatar);
@@ -255,9 +269,9 @@ public class StatusPane extends Component {
             blood.on = false;
         }
 
-        this.hp.setScaleX(health);
-        this.sp.setScaleX(sPoints);
-        exp.setScaleX((width / exp.width) * hero.getExpForLevelUp() / hero.expToLevel());
+        this.hp_img.setScaleX(health);
+        this.sp_img.setScaleX(sPoints);
+        exp_img.setScaleX((width / exp_img.width) * hero.getExpForLevelUp() / hero.expToLevel());
 
         if (chr.lvl() != lastLvl) {
 
@@ -280,6 +294,8 @@ public class StatusPane extends Component {
             keys.text(Integer.toString(lastKeys));
             keys.setX(width - 8 - keys.width() - 18);
         }
+
+        buffs.update();
     }
 
 }

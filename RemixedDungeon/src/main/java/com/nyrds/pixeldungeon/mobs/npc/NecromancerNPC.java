@@ -3,13 +3,11 @@ package com.nyrds.pixeldungeon.mobs.npc;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.platform.util.StringsManager;
 import com.watabou.pixeldungeon.actors.Char;
-import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.items.keys.SkeletonKey;
 import com.watabou.pixeldungeon.levels.RegularLevel;
 import com.watabou.pixeldungeon.levels.Room;
 import com.watabou.pixeldungeon.levels.Terrain;
 import com.watabou.pixeldungeon.scenes.GameScene;
-import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.pixeldungeon.windows.WndQuest;
 import com.watabou.utils.Bundle;
 
@@ -45,8 +43,8 @@ public class NecromancerNPC extends ImmortalNPC {
 
 	@Override
 	public boolean reset() {
-		return true;
-	}
+        return super.reset();
+    }
 
 	public static void spawn(RegularLevel level, Room room) {
 		NecromancerNPC npc = new NecromancerNPC();
@@ -67,12 +65,7 @@ public class NecromancerNPC extends ImmortalNPC {
 			introduced = true;
 
 			SkeletonKey key = new SkeletonKey();
-
-			if (key.doPickUp( hero )) {
-				GLog.i( Hero.getHeroYouNowHave(), key.name() );
-			} else {
-				level().animatedDrop( key, hero.getPos() );
-			}
+			hero.collectAnimated(key);
 
 		} else {
 

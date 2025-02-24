@@ -76,11 +76,13 @@ public abstract class EquipableItem extends Item {
 		return actions;
 	}
 
+	//Equip condition
 	public boolean doEquip(@NotNull Char hero ) {
 		Belongings belongings = hero.getBelongings();
 		return belongings.equip(this, slot(belongings));
 	}
 
+	//on equip
 	public void activate(@NotNull Char ch) {
 		equipedTo = ch.getBelongings().itemSlot(this);
 	}
@@ -110,7 +112,7 @@ public abstract class EquipableItem extends Item {
 
 		hero.spend( time2equip( hero ) );
 		
-		if (collect && !collect( hero.getBelongings().backpack )) {
+		if (collect && !collect( belongings.backpack )) {
 			doDrop(hero);
 		}
 				

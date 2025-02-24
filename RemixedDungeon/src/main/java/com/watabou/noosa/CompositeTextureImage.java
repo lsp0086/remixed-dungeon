@@ -1,12 +1,13 @@
 package com.watabou.noosa;
 
+import com.nyrds.platform.gl.NoosaScript;
 import com.nyrds.platform.gl.Texture;
 
 import java.util.ArrayList;
 
 public class CompositeTextureImage extends Image {
 
-	private ArrayList<Texture> mLayers = new ArrayList<>();
+	private final ArrayList<Texture> mLayers = new ArrayList<>();
 
 	public CompositeTextureImage() {
 		super();

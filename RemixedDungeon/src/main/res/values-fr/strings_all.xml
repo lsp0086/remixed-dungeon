@@ -721,7 +721,6 @@ Très peu d\'aventuriers ont réussi à descendre aussi loin...</string>
   <string name="ZombieGnoll_Info">Le Gnoll-Zombie a ressuscité!</string>
   <string name="HeartOfDarkness_Name">Coeur des ténébres</string>
   <string name="HeartOfDarkness_Info">Le coeur noir et palpitant de l\'Esprit perfide.</string>
-  <string name="HeartOfDarkness_Gender">masuculine</string>
   <string name="Badges_Yog_Slain">Yog-Dzewa tué</string>
   <string name="Badges_ShadowLord_Slain">Seigneur de l\'Ombre tué</string>
   <string name="Badges_SpiderQueen_Slain">Reine des Araignées tuée</string>
@@ -976,6 +975,7 @@ Très peu d\'aventuriers ont réussi à descendre aussi loin...</string>
   <string name="HeroClass_Rog">voleur</string>
   <string name="HeroClass_Hun">chasseresse</string>
   <string name="HeroClass_Elf">elfe</string>
+  <string name="HeroSubClass_DescNone"/>
   <string name="HeroSubClass_NameGlad">gladiateur</string>
   <string name="HeroSubClass_DescGlad">Une attaque réussie avec une arme de mélée permet au _Gladiateur_ de commencer un combo, durant lequel chaque nouvelle attaque réussie inflige plus de dégâts.</string>
   <string name="HeroSubClass_NameBers">berzerker</string>
@@ -1054,7 +1054,6 @@ Très peu d\'aventuriers ont réussi à descendre aussi loin...</string>
   <string name="GoldenSword_Info">Normalement les armes faites d\'un tel métal sont considérées comme de la décoration. Cependant cette lame semble être très coupante.</string>
   <string name="GoldenSword_Gender">feminine</string>
   <string name="GoldenStatue_Name">statue en or</string>
-  <string name="GoldenStatue_Gender">féminine</string>
   <string name="GoldenStatue_Name_Objective">statue en or</string>
   <string name="GoldenStatue_Desc">C\'est impensable, cette magnifique statue n\'est pas une décoration, mais une créature malicieuse attendant l\'aventurier sans méfiance. Au premier abord vous auriez juré que cette _%s_ était juste une partie de son bras.</string>
   <string name="NecromancerNPC_Name">nécromancien</string>
@@ -1159,7 +1158,6 @@ Vous maintenez le %s prête à l\'emploi.</string>
   <string name="Shuriken_Gender">masculine</string>
   <string name="Tamahawk_Name">tomahawk</string>
   <string name="Tamahawk_Info">Cette hache de jet n\'est pas si lourde, mais la manier efficacement requiert une force importante.</string>
-  <string name="Tamahawk_Gender">masculin</string>
   <string name="Kusarigama_Name">kusarigama</string>
   <string name="Kusarigama_Info">Cette arme est constituée d\'une chaîne de métal, avec une faux à une extrémité, et une lourde masse en fer à l\'autre.</string>
   <string name="Kusarigama_Gender">masculine</string>
@@ -1667,6 +1665,7 @@ Le %1$s transporte un %2$s. Volé visiblement.</string>
   <string name="ServiceManNPC_Desc">Un employé habituel d\'un établissement local.</string>
   <string name="TownShopkeeper_Name">commerçant</string>
   <string name="TownShopkeeper_Desc">Ce type est un commerçant typique. Vous devinez qu\'il sait déjà quel est votre prix. </string>
+  <string name="TownShopkeeper_Objective">commerçant</string>
   <string name="WndMovieTheatre_Watch">Regarder une publicité</string>
   <string name="WndMovieTheatre_No">s\'en aller</string>
   <string name="WndMovieTheatre_Bye">Revenez quand vous le voulez, nous serons ravis de vous revoir ! </string>
@@ -1797,7 +1796,6 @@ Le %1$s transporte un %2$s. Volé visiblement.</string>
   <string name="GothicArmor_Info">Une armure gothique est le chef-d\'oeuvre de l\'art des forgerons.</string>
   <string name="ChaosArmor_Name">Armure du chaos</string>
   <string name="ChaosArmor_Info">Les plaques rouge sang de cette armure sont fusionnées avec des chaînes rouge foncé. Elle rayonne d\'une énergie chaotique quand vous la touchez.</string>
-  <string name="ChaosCrystal_ArmorFused">Le cristal a abosrbé votre armure, et a pris la forme d\'une armure composite.</string>
   <string name="Blacksmith_Name">forgeron troll</string>
   <string name="Blacksmith_Desc">Ce forgeron troll a l\'air d\'un troll comme un autre : il est grand et maigre, et sa peau ressemble à de la pierre, que ce soit sa couleur ou sa texture. Il est en train de travailer avec des outils trop petits pour lui.</string>
   <string name="Blacksmith_Gold1">Hé l\'humain ! Tu veux te rendre utile, pas vrai ? Prends c\'te pioche et va miner du _minerai d\'or noir_, _15 morceaux_ devraient suffire. Comment ça, comment je vais payer ? Radin... Ok, ok, je n\'ai pas d\'argent, mais je peux forger pour toi. T\'as de la chance, je suis le seul forgeron des environs.</string>
@@ -2431,7 +2429,6 @@ Le %1$s transporte un %2$s. Volé visiblement.</string>
   <string name="Hunger_Starving_0">Vous êtes affamé !</string>
   <string name="Hunger_Starving_1">Vous êtes affamé !</string>
   <string name="Hunger_Starving_2">Vous êtes affamé !</string>
-  <string name="HeroClass_NecromancerPerks_0">Les Nécromanciens commencent avec 15 points de vie.</string>
   <string name="HeroClass_NecromancerPerks_1">Les Nécromanciens utilisent le mana pour lancer les sorts de la Mort.</string>
   <string name="HeroClass_NecromancerPerks_2">Les Nécromanciens commencent avec une robe de Nécromancien unique, qui fournit 1 point de mana pour chaque créature tuée.</string>
   <string name="HeroClass_NecromancerPerks_3">Les Nécromanciens commencent avec une Clé Squelette de l\'étage 7.</string>
@@ -2458,7 +2455,6 @@ Le %1$s transporte un %2$s. Volé visiblement.</string>
   <string name="HeroClass_HunPerks_2">Les chasseresses sont expertes dans l\'utilisation d\'armes à distance et leur excès de force inflige des dommages supplémentaires lorsqu\’elles y ont recours.</string>
   <string name="HeroClass_HunPerks_3">Les chasseresses gagnent plus de points de vie en buvant la rosée.</string>
   <string name="HeroClass_HunPerks_4">Les chasseresses détectent les monstres à proximité même s\'ils sont cachés par des obstacles.</string>
-  <string name="HeroClass_ElfPerks_0">Les Elfes commencent avec seulement 15 points de Vie et 9 point de Force</string>
   <string name="HeroClass_ElfPerks_1">Les Elfes ne peuvent pas être immobilisés.</string>
   <string name="HeroClass_ElfPerks_2">Les Elfes commencent avec un arc en bois amélioré et des flèches</string>
   <string name="HeroClass_ElfPerks_3">Les Elfes sont extrêmement efficaces avec les arcs et sont agiles</string>
@@ -2618,14 +2614,6 @@ Non, il n\'y avait plus de place pour elle sous le soleil. Plus maintenant. Elle
   <string name="KunaiThrow_Info">Ce lancer de kunai mortel sera effectué extrêmement rapidement, si rapidement que vous ne pourrez même pas choisir une cible.\n\nLes véritables maîtres sont capable de lancer plus d\'un kunai à la fois.</string>
   <string name="Haste_Name">Célérité extrême</string>
   <string name="Haste_Info">La hâte permet à l\'utilisateur de se déplacer à une vitesse si extrême que tout ce qui l\'entoure semble statique. Cette hâte consomme beaucoup d\'énergie et ne peut donc être utilisée que pendant une courte période.\n\nLes maîtres expérimentés sont capables de rester hâtifs pendant une plus longue période.</string>
-  <string name="Welcome_Text_29_5">
-    remix.29.5\n
-    - Gameplay:\n
-    -- Capacités du voleur!\n
-    - Modding:\n
-    -- Armure personnalisée!\n
-    - Corrections de bugs\n
-    </string>
   <string name="Char_Stole_0">%1$s a volé %2$s à %3$s !</string>
   <string name="Char_Stole_1">%1$s a volé %2$s à %3$s !</string>
   <string name="Char_Stole_2">%1$s a volé %2$s à %3$s !</string>
@@ -2651,16 +2639,6 @@ Non, il n\'y avait plus de place pour elle sous le soleil. Plus maintenant. Elle
   <string name="Char_StaStunned">étourdi</string>
   <string name="Mob_ReadyForOrder">%s attend votre ordre.</string>
   <string name="Mob_CantDoIt">Je ne peux pas le faire. J\'ai des petites pattes.</string>
-  <string name="Welcome_Text_29_6">
-    remix.29.6\n
-    - Jouabilité:\n
-    -- Actions supplémentaires à effectuer sur les monstres !\n
-    - Modification :\n
-    -- Acteurs d\'objets !\n
-    -- Propriétés spéciales des armes !\n
-    -- Plus de choses non catégorisées !\n
-    - Bugs corrigés.\n
-    </string>
   <string name="InnKeeperNPC_Name">Aubergiste</string>
   <string name="InnKeeperNPC_Name_Objective">Aubergiste</string>
   <string name="InnKeeperNPC_Gender">masculine</string>
@@ -2681,13 +2659,6 @@ Non, il n\'y avait plus de place pour elle sous le soleil. Plus maintenant. Elle
   <string name="BardNPC_Name_Objective">barde</string>
   <string name="BardNPC_Gender">masculine</string>
   <string name="BardNPC_Desc">Le barde de la ville joue de son luth.</string>
-  <string name="Welcome_Text_30">
-    remix.30.0\n
-    - Jouabilité:\n
-    -- Capacités pour tout le monde !\n
-    -- L\'auberge est désormais ouverte !\n
-    - Des bugs ont été corrigés\n
-    </string>
   <string name="Roar_Name">Rugissement</string>
   <string name="Roar_Info">Ce puissant rugissement ne manquera pas de terrifier vos ennemis et d\'inspirer vos alliés.</string>
   <string name="LightningBolt_Name">Trait de foudre</string>
@@ -2887,4 +2858,12 @@ Non, il n\'y avait plus de place pour elle sous le soleil. Plus maintenant. Elle
   <string name="SpiderQueen_DieInfo">La Reine des Araignées est vaincue ! Maintenant, je devrais retourner au niveau 5 et continuer mon voyage dans les Profondeurs.</string>
   <string name="WndModSelect_ReallyDelete">Voulez-vous vraiment l\'effacer ?</string>
   <string name="WndModSelect_AreYouSure">Effacer le mod: %s, en êtes-vous sûr?</string>
+  <string name="Challenges_Names_8">Pas de ville</string>
+  <string name="AC_Necromancy">Nécromancie</string>
+  <string name="AC_Devour">Dévorer</string>
+  <string name="WndModsDisclaimer_title">Mods</string>
+  <string name="PlagueDoctor_Name">médecin de la peste</string>
+  <string name="PlagueDoctor_Gender">masculine</string>
+  <string name="PlagueDoctor_Name_Objective">médecin de la peste</string>
+  <string name="PlagueDoctor_Desc">Cet homme bossu est complètement recouvert de cuir. Il sent très fort les préparations médicinales et... l\'aïl ?</string>
 </resources>

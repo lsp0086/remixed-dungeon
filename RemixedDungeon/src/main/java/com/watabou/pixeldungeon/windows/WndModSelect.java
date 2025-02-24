@@ -9,22 +9,20 @@ import com.nyrds.pixeldungeon.windows.HBox;
 import com.nyrds.pixeldungeon.windows.ScrollableList;
 import com.nyrds.pixeldungeon.windows.VBox;
 import com.nyrds.pixeldungeon.windows.WndHelper;
-import com.nyrds.platform.game.Game;
 import com.nyrds.platform.game.RemixedDungeon;
 import com.nyrds.platform.storage.FileSystem;
+import com.nyrds.platform.storage.SaveUtils;
+import com.nyrds.platform.util.Os;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.util.DownloadStateListener;
 import com.nyrds.util.DownloadTask;
 import com.nyrds.util.GuiProperties;
-import com.nyrds.util.ModdingMode;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.Mods;
 import com.nyrds.util.UnzipStateListener;
 import com.nyrds.util.UnzipTask;
-import com.nyrds.util.Util;
 import com.watabou.noosa.Text;
 import com.watabou.noosa.ui.Component;
-import com.watabou.pixeldungeon.SaveUtils;
-import com.watabou.pixeldungeon.scenes.GameScene;
 import com.watabou.pixeldungeon.scenes.PixelScene;
 import com.watabou.pixeldungeon.ui.Icons;
 import com.watabou.pixeldungeon.ui.RedButton;
@@ -56,7 +54,7 @@ public class WndModSelect extends Window implements DownloadStateListener.IDownl
 
 		modsList = Mods.buildModsList();
 
-		boolean haveInternet = Util.isConnectedToInternet();
+		boolean haveInternet = Os.isConnectedToInternet();
 
         Text tfTitle = PixelScene.createMultiline(R.string.ModsButton_SelectMod, GuiProperties.titleFontSize());
 		tfTitle.hardlight(TITLE_COLOR);
@@ -107,13 +105,15 @@ public class WndModSelect extends Window implements DownloadStateListener.IDownl
 				@Override
 				protected void onClick() {
 					ModDesc infoDesc = Mods.getModDesc(desc.name, GamePreferences.uiLanguage());
+					infoDesc.installed = desc.installed;
+					infoDesc.installDir = desc.installDir;
 					GameLoop.addToScene(new WndModInfo(infoDesc));
 				}
 			};
 
 			modRow.add(modInfo);
 
-			if (desc.installed && !ModdingMode.REMIXED.equals(desc.name)) {
+			if (desc.installed && !ModdingBase.REMIXED.equals(desc.name)) {
 				SimpleButton deleteBtn = new SimpleButton(Icons.get(Icons.CLOSE)) {
 					protected void onClick() {
 						GameLoop.addToScene(new WndOptions(StringsManager.getVar(R.string.WndModSelect_ReallyDelete),
@@ -156,8 +156,8 @@ public class WndModSelect extends Window implements DownloadStateListener.IDownl
 
 		if (GamePreferences.activeMod().equals(name)) {
 			SaveUtils.deleteGameAllClasses();
-			SaveUtils.copyAllClassesFromSlot(ModdingMode.REMIXED);
-			GamePreferences.activeMod(ModdingMode.REMIXED);
+			SaveUtils.copyAllClassesFromSlot(ModdingBase.REMIXED);
+			GamePreferences.activeMod(ModdingBase.REMIXED);
 			RemixedDungeon.instance().doRestart();
 		}
 
@@ -167,7 +167,7 @@ public class WndModSelect extends Window implements DownloadStateListener.IDownl
 	protected void onSelect(String option) {
 
 		ModDesc desc = modsList.get(option);
-		if (!option.equals(ModdingMode.REMIXED) || desc.needUpdate) {
+		if (!option.equals(ModdingBase.REMIXED) || desc.needUpdate) {
 
 			if (desc.needUpdate) {
 				FileSystem.deleteRecursive(FileSystem.getExternalStorageFile(desc.installDir));

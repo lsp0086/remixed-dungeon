@@ -3,19 +3,19 @@ package com.nyrds.pixeldungeon.support;
 import android.view.View;
 import android.webkit.WebView;
 
-import com.appodeal.ads.BannerView;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.app.RemixedDungeonApp;
 import com.nyrds.platform.game.Game;
+import com.nyrds.platform.support.AAdsComboProvider;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class AdsUtils {
 
-    static Map<AdsUtilsCommon.IBannerProvider, Integer> bannerFails = new HashMap<>();
-    static Map<AdsUtilsCommon.IInterstitialProvider, Integer> interstitialFails = new HashMap<>();
-    static Map<AdsUtilsCommon.IRewardVideoProvider, Integer> rewardVideoFails = new HashMap<>();
+    static final Map<AdsUtilsCommon.IBannerProvider, Integer> bannerFails = new HashMap<>();
+    static final Map<AdsUtilsCommon.IInterstitialProvider, Integer> interstitialFails = new HashMap<>();
+    static final Map<AdsUtilsCommon.IRewardVideoProvider, Integer> rewardVideoFails = new HashMap<>();
 
     static {
         if(!RemixedDungeonApp.checkOwnSignature()) {
@@ -31,11 +31,11 @@ public class AdsUtils {
         }
     }
 
-    static int bannerIndex() {
+    public static int bannerIndex() {
         int childs = Game.instance().getLayout().getChildCount();
         for (int i = 0; i < childs; ++i) {
             View view = Game.instance().getLayout().getChildAt(i);
-            if (view instanceof WebView || view instanceof BannerView) {
+            if (view instanceof WebView) {
                 return i;
             }
         }

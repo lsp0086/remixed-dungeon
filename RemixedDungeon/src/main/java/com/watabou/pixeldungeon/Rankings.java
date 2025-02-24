@@ -23,7 +23,7 @@ import com.nyrds.pixeldungeon.game.GamePreferences;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.game.Game;
 import com.nyrds.platform.storage.FileSystem;
-import com.nyrds.util.ModdingMode;
+import com.nyrds.util.ModdingBase;
 import com.watabou.pixeldungeon.actors.hero.Hero;
 import com.watabou.pixeldungeon.actors.hero.HeroClass;
 import com.watabou.pixeldungeon.utils.Utils;
@@ -84,16 +84,16 @@ public enum Rankings {
 		resDesc.put("duration", Float.toString(Statistics.duration));
 
 		resDesc.put("difficulty", Integer.toString(GameLoop.getDifficulty()));
-		resDesc.put("version",   Game.version);
-		resDesc.put("mod",       ModdingMode.activeMod());
-		resDesc.put("modVersion",Integer.toString(ModdingMode.activeModVersion()));
+		resDesc.put("version",   GameLoop.version);
+		resDesc.put("mod",       ModdingBase.activeMod());
+		resDesc.put("modVersion",Integer.toString(ModdingBase.activeModVersion()));
 		resDesc.put("donation",  Integer.toString(GamePreferences.donated()));
 		resDesc.put("challenges", Integer.toString(Dungeon.getChallenges()));
 		resDesc.put("facilitations", Integer.toString(Dungeon.getFacilitations()));
 
 		EventCollector.logEvent("gameover", resDesc);
 
-		if (ModdingMode.inRemixed()){
+		if (ModdingBase.inRemixed()){
 			Game.instance().playGames.submitScores(GameLoop.getDifficulty(), rec.score);
 		}
 
@@ -138,7 +138,7 @@ public enum Rankings {
 				removedGame = records.remove( size - 1 );
 			}
 
-			if (removedGame.gameFile.length() > 0) {
+			if (!removedGame.gameFile.isEmpty()) {
 				Game.instance().deleteFile( removedGame.gameFile );
 			}
 		}
@@ -256,7 +256,7 @@ public enum Rankings {
 			heroClass	= HeroClass.restoreFromBundle(bundle);
 
 			gameFile	= bundle.getString( GAME );
-			mod			= bundle.optString(MOD, ModdingMode.REMIXED);
+			mod			= bundle.optString(MOD, ModdingBase.REMIXED);
 		}
 		
 		@Override

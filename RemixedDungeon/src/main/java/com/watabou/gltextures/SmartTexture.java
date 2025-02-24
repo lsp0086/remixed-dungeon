@@ -28,14 +28,7 @@ public class SmartTexture extends Texture {
 	public int width;
 	public int height;
 
-	public int fModeMin;
-	public int fModeMax;
-
-	public int wModeH;
-	public int wModeV;
-	boolean loaded;
-
-	public BitmapData bitmap;
+	public Atlas atlas;
 
 	public SmartTexture() {
 		super();
@@ -47,62 +40,24 @@ public class SmartTexture extends Texture {
 
 	public SmartTexture(@NotNull BitmapData bitmap, int filtering, int wrapping ) {
 		super();
-		
+
 		bitmap( bitmap );
 		filter( filtering, filtering );
 		wrap( wrapping, wrapping );
 	}
 
 	@Override
-	public void filter(int minMode, int maxMode) {
-		fModeMin = minMode;
-		fModeMax = maxMode;
-	}
-	
-	@Override
-	public void wrap( int s, int t ) {
-		wModeH = s;
-		wModeV = t;
-	}
-
-	@Override
 	public void bitmap( BitmapData bitmap ) {
-		handMade(bitmap, true );
-
-
-	public void bind() {
-		_bind();
-		if(!loaded) {
-			super.filter(fModeMin,fModeMax);
-			super.wrap(wModeH,wModeV);
-
-			if(bitmap!=null) {
-				handMade(bitmap);
-			}
-
-			loaded = true;
-		}
-	}
-
-	public void bitmap( Bitmap bitmap) {
-		this.bitmap = bitmap;
 		width = bitmap.getWidth();
 		height = bitmap.getHeight();
+		super.bitmap( bitmap );
 	}
 
-
-	@Override
-	public void delete() {
-		super.delete();
-		//bitmap = null;
-		loaded = false;
-	}
-	
 	public RectF uvRect( int left, int top, int right, int bottom ) {
 		return new RectF(
-			(float)left / width,
-			(float)top	/ height,
-			(float)right / width,
-			(float)bottom / height );
+				(float)left / width,
+				(float)top	/ height,
+				(float)right / width,
+				(float)bottom / height );
 	}
 }

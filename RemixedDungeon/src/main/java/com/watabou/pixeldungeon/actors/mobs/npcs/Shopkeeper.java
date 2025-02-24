@@ -7,7 +7,7 @@ import com.nyrds.pixeldungeon.items.ItemUtils;
 import com.nyrds.pixeldungeon.items.Treasury;
 import com.nyrds.pixeldungeon.mechanics.NamedEntityKind;
 import com.nyrds.pixeldungeon.windows.WndShopOptions;
-import com.nyrds.util.ModdingMode;
+import com.nyrds.util.ModdingBase;
 import com.watabou.pixeldungeon.Badges;
 import com.watabou.pixeldungeon.Dungeon;
 import com.watabou.pixeldungeon.actors.Char;
@@ -78,7 +78,7 @@ public class Shopkeeper extends NPC {
 
 		final Bag backpack = getBelongings().backpack;
 
-		if(ModdingMode.inRemixed() && GameLoop.getDifficulty() < 2) {
+		if(ModdingBase.inRemixed() && GameLoop.getDifficulty() < 2) {
 			if (countFood(backpack) < 3) {
 				var foodSupply = new OverpricedRation();
 				foodSupply.quantity(5);
@@ -88,8 +88,12 @@ public class Shopkeeper extends NPC {
 
 		if (bagSold.isEmpty()) {
 			Item bag = Badges.getNotBroughtBag();
-			if(bag.valid() && collect(bag)) {
-				bagSold = bag.getEntityKind();
+			if(bag.valid()) {
+				if (getBelongings().getItem(bag.getEntityKind()) == null) {
+					if(collect(bag)) {
+						bagSold = bag.getEntityKind();
+					}
+				}
 			}
 		}
 
@@ -127,6 +131,11 @@ public class Shopkeeper extends NPC {
 	@Override
 	public boolean useBags() {
 		return false;
+	}
+
+	@Override
+	public int effectiveSTR() {
+		return Dungeon.hero.effectiveSTR();
 	}
 
 }

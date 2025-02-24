@@ -1,6 +1,5 @@
 package com.watabou.pixeldungeon;
 
-
 import com.google.common.base.Optional;
 import com.nyrds.LuaInterface;
 import com.nyrds.lua.LuaEngine;
@@ -15,6 +14,7 @@ import com.nyrds.pixeldungeon.levels.IceCavesLevel;
 import com.nyrds.pixeldungeon.levels.NecroLevel;
 import com.nyrds.pixeldungeon.mechanics.buffs.BuffFactory;
 import com.nyrds.pixeldungeon.mechanics.spells.SpellFactory;
+import com.nyrds.pixeldungeon.ml.BuildConfig;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.mobs.npc.AzuterronNPC;
 import com.nyrds.pixeldungeon.mobs.npc.CagedKobold;
@@ -27,12 +27,14 @@ import com.nyrds.pixeldungeon.utils.ItemsList;
 import com.nyrds.pixeldungeon.utils.Position;
 import com.nyrds.platform.EventCollector;
 import com.nyrds.platform.game.Game;
+import com.nyrds.platform.storage.CommonPrefs;
 import com.nyrds.platform.storage.FileSystem;
 import com.nyrds.platform.storage.Preferences;
+import com.nyrds.platform.storage.SaveUtils;
+import com.nyrds.platform.util.Os;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.platform.util.TrackedRuntimeException;
-import com.nyrds.util.ModdingMode;
-import com.nyrds.util.Util;
+import com.nyrds.util.ModdingBase;
 import com.watabou.noosa.Scene;
 import com.watabou.pixeldungeon.Rankings.gameOver;
 import com.watabou.pixeldungeon.actors.Actor;
@@ -67,7 +69,7 @@ import com.watabou.utils.SystemTime;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -77,11 +79,9 @@ import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
 
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
-
-
-import static com.nyrds.platform.game.RemixedDungeon.MOVE_TIMEOUTS;
 
 public class Dungeon {
 
@@ -91,7 +91,9 @@ public class Dungeon {
     public static boolean dewVial; // true if the dew vial can be spawned
     public static int transmutation; // depth number for a well of transmutation
 
+    @Getter
     private static int challenges;
+    @Getter
     private static int facilitations;
 
     @NotNull
@@ -122,13 +124,19 @@ public class Dungeon {
 
     public static HeroClass heroClass;
 
+    @Getter
     private static boolean isometricMode = false;
     public static boolean isometricModeAllowed = false;
 
 
     public static void initSizeDependentStuff(int w, int h) {
+
+        if(BuildConfig.DEBUG) {
+            GLog.debug("dungeon size: " + w + "x" + h);
+            Utils.printStackTrace();
+        }
+
         int size = w * h;
-        Actor.clearActors();
 
         visible = new boolean[size];
         passable = new boolean[size];
@@ -142,6 +150,9 @@ public class Dungeon {
         ModQuirks.reset();
         if (!Scene.sceneMode.equals(Scene.LEVELS_TEST)) {
             LuaEngine.reset();
+            loadModData();
+        } else {
+            LuaEngine.runScriptFile("scripts/startup/quirks.lua");
         }
 
         DungeonGenerator.reset();
@@ -298,8 +309,12 @@ public class Dungeon {
 
         isometricModeAllowed = level.isPlainTile(1); //TODO check entire level
 
+        if(ModQuirks.only2dTiles) {
+            isometricModeAllowed = false;
+        }
+        
         if (isometricModeAllowed) {
-            setIsometricMode(Preferences.INSTANCE.getBoolean(Preferences.KEY_USE_ISOMETRIC_TILES, false));
+            setIsometricMode(Preferences.INSTANCE.getBoolean(CommonPrefs.KEY_USE_ISOMETRIC_TILES, false));
         } else {
             setIsometricMode(false);
         }
@@ -330,7 +345,7 @@ public class Dungeon {
             if (dup.valid()) {
                 GLog.debug("Removing dup: %s, %d", dup.getEntityKind(), dup.getId());
                 Actor.remove(dup);
-                Actor.freeCell(dup.getPos());
+                Actor.freeCell(dup);
                 CharsList.remove(dup.getId());
                 level.mobs.remove(dup);
             }
@@ -345,6 +360,20 @@ public class Dungeon {
             mob.setState(MobAi.getStateByClass(Wandering.class));
             level.spawnMob(mob);
         }
+
+        for (Mob mob : hero.initialAlies) {
+
+            int cell = level.getEmptyCellNextTo(hero.getPos());
+            if (!level.cellValid(cell)) {
+                cell = hero.getPos();
+            }
+            mob.setPos(cell);
+
+            mob.setEnemy(CharsList.DUMMY);
+            mob.setState(MobAi.getStateByClass(Wandering.class));
+            level.spawnMob(mob);
+        }
+        hero.initialAlies.clear();
 
         previousLevelId = levelId;
         levelId = level.levelId;
@@ -379,8 +408,8 @@ public class Dungeon {
     }
 
     private static final String VERSION = "version";
-    private static final String HERO = "hero";
-    private static final String DEPTH = "depth";
+    public static final String HERO = "hero";
+    public static final String DEPTH = "depth";
     private static final String LEVEL = "level";
     private static final String POS = "potionsOfStrength";
     private static final String SOU = "scrollsOfEnhancement";
@@ -411,7 +440,7 @@ public class Dungeon {
         Bundle bundle = new Bundle();
 
         bundle.put(GAME_ID, gameId);
-        bundle.put(VERSION, Game.version);
+        bundle.put(VERSION, GameLoop.version);
         bundle.put(HERO, hero);
         bundle.put(DEPTH, depth);
 
@@ -466,11 +495,23 @@ public class Dungeon {
 
         bundle.put(LAST_USED_ID, EntityIdSource.getNextId());
         CharsList.storeInBundle(bundle);
-        bundle.put(MOD, ModdingMode.activeMod());
+        bundle.put(MOD, ModdingBase.activeMod());
 
         OutputStream output = FileSystem.getOutputStream(fileName);
         Bundle.write(bundle, output);
         output.close();
+
+        saveModData();
+
+    }
+
+    private static void saveModData() throws IOException {
+        OutputStream modData = FileSystem.getOutputStream(SaveUtils.modDataFile());
+        Bundle modBundle = new Bundle();
+        modBundle.put(SCRIPTS_DATA,
+                LuaEngine.require(LuaEngine.SCRIPTS_LIB_STORAGE).get("serializeModData").call().checkjstring());
+        Bundle.write(modBundle, modData);
+        modData.close();
     }
 
     @SneakyThrows
@@ -489,7 +530,7 @@ public class Dungeon {
 
     //@AddTrace(name = "Dungeon.saveAllImpl")
     private static void saveAllImpl() {
-        float MBytesAvailable = Util.getAvailableInternalMemorySize() / 1024f / 1024f;
+        float MBytesAvailable = Os.getAvailableInternalMemorySize() / 1024f / 1024f;
 
         if (MBytesAvailable < 2) {
             EventCollector.logEvent("saveGame", "lowMemory");
@@ -515,7 +556,7 @@ public class Dungeon {
 
                 SaveUtils.copySaveToSlot(SaveUtils.getAutoSave(), heroClass);
 
-                GamesInProgress.set(hero.getHeroClass(), depth, hero.lvl());
+                GamesInProgress.set(hero, depth);
             } catch (IOException e) {
                 Game.toast(StringsManager.getVar(R.string.Dungeon_saveIoError) + "\n" + e.getLocalizedMessage());
                 EventCollector.logException(new Exception("cannot write save", e));
@@ -567,8 +608,8 @@ public class Dungeon {
 
     private static void loadGameFromBundle(Bundle bundle, boolean fullLoad) {
 
-        String saveMod = bundle.optString(MOD, ModdingMode.REMIXED);
-        String activeMod = ModdingMode.activeMod();
+        String saveMod = bundle.optString(MOD, ModdingBase.REMIXED);
+        String activeMod = ModdingBase.activeMod();
 
         if (fullLoad && !saveMod.equals(activeMod)) {
             EventCollector.logException(new Exception(
@@ -659,14 +700,24 @@ public class Dungeon {
             try {
                 GameLoop.loadingOrSaving.incrementAndGet();
 
-                val bundle = Bundle.readFromFile(fileName);
+                val bundle = gameBundle(fileName);
                 if (bundle.isPresent()) {
                     loadGameFromBundle(bundle.get(), fullLoad);
                 }
 
+                loadModData();
+
             } finally {
                 GameLoop.loadingOrSaving.decrementAndGet();
             }
+        }
+    }
+
+    @SneakyThrows
+    private static void loadModData() {
+        val modBundle = gameBundle(SaveUtils.modDataFile());
+        if (modBundle.isPresent()) {
+            LuaEngine.require(LuaEngine.SCRIPTS_LIB_STORAGE).get("deserializeModData").call(modBundle.get().getString(SCRIPTS_DATA));
         }
     }
 
@@ -689,7 +740,7 @@ public class Dungeon {
 
                 DungeonGenerator.loadingLevel(next);
 
-                String loadFrom = SaveUtils.depthFileForLoad(heroClass,
+                String loadFrom = SaveUtils.depthFileForSave(heroClass,
                         DungeonGenerator.getLevelDepth(levelId),
                         DungeonGenerator.getLevelKind(levelId),
                         levelId);
@@ -701,11 +752,7 @@ public class Dungeon {
                     return newLevel(next);
                 }
 
-                if (!FileSystem.getFile(loadFrom).exists()) {
-                    return newLevel(next);
-                }
-
-                try (InputStream input = new FileInputStream(FileSystem.getFile(loadFrom))) {
+                try (InputStream input = FileSystem.getInputStream(loadFrom)) {
                     Bundle bundle = Bundle.read(input);
 
                     Level level = (Level) bundle.get("level");
@@ -718,7 +765,8 @@ public class Dungeon {
                     level.levelId = next.levelId;
                     initSizeDependentStuff(level.getWidth(), level.getHeight());
                     return level;
-
+                } catch (FileNotFoundException ignore) {
+                    return newLevel(next);
                 }
             } finally {
                 GameLoop.loadingOrSaving.decrementAndGet();
@@ -738,22 +786,12 @@ public class Dungeon {
     }
 
     public static Optional<Bundle> gameBundle(String fileName) throws IOException {
-
-        var saveFile = FileSystem.getFile(fileName);
-        if (saveFile.exists()) {
-            try (InputStream input = new FileInputStream(saveFile)) {
+            try (InputStream input = FileSystem.getInputStream(fileName)) {
                 return Optional.of(Bundle.read(input));
+            } catch (FileNotFoundException ignore) {
             }
-        }
-        return Optional.absent();
-    }
 
-    public static void preview(GamesInProgress.Info info, Bundle bundle) {
-        info.depth = bundle.getInt(DEPTH);
-        if (info.depth == -1) {
-            info.depth = bundle.getInt("maxDepth"); // FIXME
-        }
-        Hero.preview(info, bundle.getBundle(HERO));
+            return Optional.absent();
     }
 
     public static void fail(String desc) {
@@ -776,6 +814,7 @@ public class Dungeon {
 
     public static void observeImpl() {
         level.updateFieldOfView(hero.getControlTarget());
+
         System.arraycopy(level.fieldOfView, 0, visible, 0, visible.length);
 
         BArray.or(level.mapped, visible, level.mapped);
@@ -844,7 +883,12 @@ public class Dungeon {
                 return Level.INVALID_CELL;
             }
 
-            Char chr = Actor.findChar(to);
+            Char chr = null;
+
+            if (level.fieldOfView[to]) {
+                chr = Actor.findChar(to);
+            }
+
 
             if (chr instanceof Mob) {
                 Mob mob = (Mob) chr;
@@ -932,15 +976,11 @@ public class Dungeon {
     }
 
     public static double moveTimeout() {
-        return MOVE_TIMEOUTS[moveTimeoutIndex];
+        return GameLoop.MOVE_TIMEOUTS[moveTimeoutIndex];
     }
 
     public static void saveCurrentLevel() {
         saveLevel(getLevelSaveFile(currentPosition()), Dungeon.level);
-    }
-
-    public static int getChallenges() {
-        return challenges;
     }
 
 
@@ -955,7 +995,7 @@ public class Dungeon {
     }
 
     public static boolean setChallenge(int mask) {
-        if (ModdingMode.inMod()) {
+        if (ModdingBase.inMod()) {
             if (mask == Challenges.NO_TOWN) {
                 return false;
             }
@@ -969,10 +1009,6 @@ public class Dungeon {
     public static void resetChallenge(int mask) {
         challenges = challenges & ~mask;
         setChallenges(challenges);
-    }
-
-    public static int getFacilitations() {
-        return facilitations;
     }
 
     public static void setChallenges(int challenges) {
@@ -1030,7 +1066,4 @@ public class Dungeon {
         Dungeon.isometricMode = isometricMode;
     }
 
-    public static boolean isIsometricMode() {
-        return isometricMode;
-    }
 }

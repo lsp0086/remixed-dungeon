@@ -17,10 +17,11 @@ local DungeonGenerator = luajava.bindClass("com.nyrds.pixeldungeon.utils.Dungeon
 local PathFinder       = luajava.bindClass("com.watabou.utils.PathFinder")
 
 local Sample           = luajava.bindClass("com.nyrds.platform.audio.Sample")
-local Music            = luajava.bindClass("com.nyrds.platform.audio.Music")
+local Music            = luajava.bindClass("com.nyrds.platform.audio.MusicManager")
 local StringsManager   = luajava.bindClass("com.nyrds.platform.util.StringsManager")
 local CharUtils        = luajava.bindClass("com.watabou.pixeldungeon.actors.CharUtils")
 local ModQuirks        = luajava.bindClass("com.nyrds.pixeldungeon.game.ModQuirks")
+local Util             = luajava.bindClass("com.nyrds.util.Util")
 
 local Buffs  = {
     Buff         = luajava.bindClass("com.watabou.pixeldungeon.actors.buffs.Buff"),
@@ -191,10 +192,11 @@ local RPD = {
     DungeonTilemap = luajava.bindClass("com.watabou.pixeldungeon.DungeonTilemap"),
     ModdingMode = luajava.bindClass("com.nyrds.util.ModdingMode"),
     ModQuirks = ModQuirks,
-
+    Util = Util,
     CharsList = CharsList,
     CharUtils = CharUtils,
     Utils = luajava.bindClass("com.nyrds.lua.LuaUtils"),
+    QuickSlot = luajava.bindClass("com.watabou.pixeldungeon.ui.QuickSlot"),
 
     System = {
         Input = luajava.bindClass("com.nyrds.platform.app.Input")
@@ -289,7 +291,7 @@ local RPD = {
     end,
 
     textById = function(id)
-        return StringsManager:getVar(id)
+        return StringsManager:maybeId(id)
     end,
 
     glog = function (text,...)
@@ -355,6 +357,12 @@ local RPD = {
         wnd:showSellWnd()
     end,
 
+    showQuestWindow = function(chr, text_id)
+        local text = StringsManager:maybeId(text_id)
+        local wnd = luajava.newInstance(Objects.Ui.WndQuest,chr,text)
+        --chr:say(text)
+        GameScene:show(wnd)
+    end,
 
     zapEffect = function (from, to, zapEffect)
         GameScene:zapEffect(from, to, zapEffect)
@@ -387,6 +395,11 @@ local RPD = {
 
     attachJumpTweener = function(chr, target, height, time)
         Tweeners.JumpTweener:attachTo(chr:getSprite(), target, height, time)
+    end,
+
+    carcass = function(mobClass)
+        local mob = MobFactory:createMob(mobClass, json.encode(mobDesc or {_=""}))
+        return mob:carcass()
     end,
 
     item = function(itemClass, quantity)

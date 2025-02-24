@@ -24,7 +24,6 @@ import com.watabou.pixeldungeon.items.Item;
 import com.watabou.pixeldungeon.items.ItemStatusHandler;
 import com.watabou.pixeldungeon.items.KindOfWeapon;
 import com.watabou.pixeldungeon.items.bags.WandHolster;
-import com.watabou.pixeldungeon.items.rings.RingOfPower.Power;
 import com.watabou.pixeldungeon.mechanics.Ballistica;
 import com.watabou.pixeldungeon.sprites.ItemSpriteSheet;
 import com.watabou.pixeldungeon.ui.QuickSlot;
@@ -56,7 +55,7 @@ public abstract class Wand extends KindOfWeapon implements UnknownItem {
     protected boolean hitChars = true;
     protected boolean hitObjects = false;
 
-    private boolean directional = true;
+    private final boolean directional = true;
 
     private static final Class<?>[] wands = {WandOfTeleportation.class,
             WandOfSlowness.class, WandOfFirebolt.class, WandOfPoison.class,
@@ -198,9 +197,9 @@ public abstract class Wand extends KindOfWeapon implements UnknownItem {
     public String info() {
         StringBuilder info = new StringBuilder(isKnown() ? desc()
                 : Utils.format(R.string.Wand_Wood, wood));
-        if (Dungeon.hero.getHeroClass() == HeroClass.MAGE
-                || Dungeon.hero.getSubClass() == HeroSubClass.SHAMAN) {
-            damageRoll(Dungeon.hero);
+        Char owner = getOwner();
+        if (owner.getHeroClass() == HeroClass.MAGE || owner.getSubClass() == HeroSubClass.SHAMAN) {
+            damageRoll(owner);
             info.append("\n\n");
             if (isLevelKnown()) {
                 info.append(Utils.format(R.string.Wand_Damage, MIN + (MAX - MIN) / 2));
@@ -370,9 +369,9 @@ public abstract class Wand extends KindOfWeapon implements UnknownItem {
 
     @Override
     public int damageRoll(Char user) {
-        int tier = 1 + effectiveLevel() / 3;
-        MIN = tier + user.skillLevel();
-        MAX = (tier * tier - tier + 10) / 2 + user.skillLevel() * tier + effectiveLevel();
+        float tier = 1 + effectiveLevel() / 3.0f;
+        MIN = (int) (tier + user.skillLevel());
+        MAX = (int) ((tier * tier - tier + 10) / 2 + user.skillLevel() * tier + effectiveLevel());
 
         return super.damageRoll(user);
     }

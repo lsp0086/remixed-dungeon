@@ -1,6 +1,5 @@
 package com.nyrds.pixeldungeon.mobs.npc;
 
-import com.nyrds.pixeldungeon.items.ItemUtils;
 import com.nyrds.pixeldungeon.mechanics.NamedEntityKind;
 import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.mobs.guts.TreacherousSpirit;
@@ -20,6 +19,10 @@ import com.watabou.utils.Bundle;
 import org.jetbrains.annotations.NotNull;
 
 public class AzuterronNPC extends Shopkeeper {
+
+    {
+        spriteClass = "spritesDesc/AzuterronNPC.json";
+    }
 
     public AzuterronNPC() {
         movable = false;
@@ -49,17 +52,13 @@ public class AzuterronNPC extends Shopkeeper {
 
     @Override
     public boolean reset() {
-        return true;
+        return super.reset();
     }
 
     @Override
     public boolean act() {
 
-        ItemUtils.throwItemAway(getPos());
-
-        getSprite().turnTo(getPos(), Dungeon.hero.getPos());
-        spend(TICK);
-        return true;
+        return super.act();
     }
 
     @Override

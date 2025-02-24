@@ -1,6 +1,8 @@
 
 package com.watabou.pixeldungeon.scenes;
 
+import android.view.KeyEvent;
+
 import com.nyrds.LuaInterface;
 import com.nyrds.pixeldungeon.effects.CustomClipEffect;
 import com.nyrds.pixeldungeon.effects.EffectsFactory;
@@ -16,13 +18,14 @@ import com.nyrds.pixeldungeon.ml.R;
 import com.nyrds.pixeldungeon.utils.DungeonGenerator;
 import com.nyrds.pixeldungeon.windows.WndHeroSpells;
 import com.nyrds.platform.EventCollector;
-import com.nyrds.platform.audio.Music;
+import com.nyrds.platform.audio.MusicManager;
 import com.nyrds.platform.audio.Sample;
 import com.nyrds.platform.game.Game;
+import com.nyrds.platform.input.Keys;
 import com.nyrds.platform.util.StringsManager;
 import com.nyrds.platform.util.TrackedRuntimeException;
 import com.nyrds.util.ModError;
-import com.nyrds.util.ModdingMode;
+import com.nyrds.util.ModdingBase;
 import com.nyrds.util.Util;
 import com.nyrds.util.WeakOptional;
 import com.watabou.noosa.Camera;
@@ -74,6 +77,7 @@ import com.watabou.pixeldungeon.ui.BusyIndicator;
 import com.watabou.pixeldungeon.ui.GameLog;
 import com.watabou.pixeldungeon.ui.HealthIndicator;
 import com.watabou.pixeldungeon.ui.Icons;
+import com.watabou.pixeldungeon.ui.InformerCellListener;
 import com.watabou.pixeldungeon.ui.QuickSlot;
 import com.watabou.pixeldungeon.ui.ResumeIndicator;
 import com.watabou.pixeldungeon.ui.StatusPane;
@@ -84,7 +88,7 @@ import com.watabou.pixeldungeon.utils.GLog;
 import com.watabou.pixeldungeon.utils.Utils;
 import com.watabou.pixeldungeon.windows.WndBag;
 import com.watabou.pixeldungeon.windows.WndBag.Mode;
-import com.watabou.pixeldungeon.windows.WndGame;
+import com.watabou.pixeldungeon.windows.WndInGameMenu;
 import com.watabou.pixeldungeon.windows.WndTitledMessage;
 import com.watabou.utils.Random;
 
@@ -94,10 +98,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 
 
-
 public class GameScene extends PixelScene {
 
     private static final float MAX_BRIGHTNESS = 1.22f;
+    public static final CellSelector.Listener informer = new InformerCellListener();
 
     private static volatile GameScene scene;
 
@@ -117,6 +121,7 @@ public class GameScene extends PixelScene {
 
     private static CellSelector cellSelector;
 
+    private Group terrain;
     private Group ripples;
     private Group bottomEffects;
     private Group objects;
@@ -133,17 +138,16 @@ public class GameScene extends PixelScene {
 
 
     //ui elements
-    private Toolbar         toolbar;
-    private StatusPane      statusPane;
-    private Toast           prompt;
+    private Toolbar toolbar;
+    private StatusPane statusPane;
+    private Toast prompt;
     private AttackIndicator attack;
     private ResumeIndicator resume;
-    private GameLog         log;
-    private BusyIndicator   busy;
+    private GameLog log;
+    private BusyIndicator busy;
 
     private volatile boolean sceneCreated = false;
-    private          float   waterSx      = 0, waterSy = -5;
-    private boolean objectSortingRequested;
+    private float waterSx = 0, waterSy = -5;
     private boolean mapBuildingComplete = false;
 
 
@@ -159,25 +163,24 @@ public class GameScene extends PixelScene {
 
 
     static public void playLevelMusic() {
-        if(Dungeon.level == null) {
+        if (Dungeon.level == null) {
             EventCollector.logException("attempt to play music on null level");
             return;
         }
-        Music.INSTANCE.play(Dungeon.level.music(), true);
-        Music.INSTANCE.volume(1f);
+        MusicManager.INSTANCE.play(Dungeon.level.music(), true);
     }
 
     @Override
     public void create() {
         Level level = Dungeon.level;
 
-        if(level==null) {
+        if (level == null) {
             throw new TrackedRuntimeException("Trying to create GameScene when level is nil!");
         }
 
         Hero hero = Dungeon.hero;
 
-        if(hero.invalid()) {
+        if (hero.invalid()) {
             throw new TrackedRuntimeException("Trying to create GameScene when hero is invalid!");
         }
 
@@ -197,68 +200,23 @@ public class GameScene extends PixelScene {
 
         scene = this;
 
-        Group terrain = new Group();
-        add(terrain);
-
-        water = new SkinnedBlock(level.getWidth() * DungeonTilemap.SIZE,
-                level.getHeight() * DungeonTilemap.SIZE, level.getWaterTex());
-
-        waterSx = DungeonGenerator.getLevelProperty(level.levelId, "waterSx", waterSx);
-        waterSy = DungeonGenerator.getLevelProperty(level.levelId, "waterSy", waterSy);
-
-        terrain.add(water);
-
-        ripples = new Group();
-        terrain.add(ripples);
-
-        String logicTilesAtlas = level.getProperty("tiles_logic", "");
-
-        if(!logicTilesAtlas.isEmpty()) {
-			logicTiles = new ClassicDungeonTilemap(level,logicTilesAtlas);
-			terrain.add(logicTiles);
-		}
-
-        if (!level.customTiles()) {
-            baseTiles = DungeonTilemap.factory(level);
-
-            if(baseTiles instanceof XyzDungeonTilemap) {
-                doorTiles = ((XyzDungeonTilemap)baseTiles).doorTilemap();
-                roofTiles = ((XyzDungeonTilemap)baseTiles).roofTilemap();
-            }
-
-        } else {
-            CustomLayerTilemap tiles = new CustomLayerTilemap(level, Level.LayerId.Base);
-            tiles.addLayer(Level.LayerId.Deco);
-            tiles.addLayer(Level.LayerId.Deco2);
-            baseTiles = tiles;
-
-            tiles = new CustomLayerTilemap(level, Level.LayerId.Roof_Base);
-            tiles.addLayer(Level.LayerId.Roof_Deco);
-            tiles.setTransparent(true);
-            roofTiles = tiles;
-        }
-        terrain.add(baseTiles);
+        createTerrain(level);
 
         bottomEffects = new Group();
         add(bottomEffects);
 
         objects = new Group();
+        objects.sort = true;
         add(objects);
 
         objectEffects = new Group();
         add(objectEffects);
 
-        level.addVisuals(this);
-
         heaps = new Group();
         add(heaps);
 
-        if(doorTiles!=null) {
+        if (doorTiles != null) {
             add(doorTiles);
-        }
-
-        for (Heap heap : level.allHeaps()) {
-            addHeapSprite(heap);
         }
 
         emitters = new Group();
@@ -266,7 +224,14 @@ public class GameScene extends PixelScene {
         emoicons = new Group();
 
         mobs = new Group();
+        mobs.sort = true;
         topMobs = new Group();  // mobs that are drawn on top of walls
+        topMobs.sort = true;
+
+        for (Heap heap : level.allHeaps()) { //so carcases cloud ne loaded
+            addHeapSprite(heap);
+            heap.addActors();
+        }
 
         add(mobs);
 
@@ -289,7 +254,7 @@ public class GameScene extends PixelScene {
 
         for (Mob mob : level.mobs) {
             if (Statistics.amuletObtained) {
-                if(!mob.friendly(hero)) {
+                if (!mob.friendly(hero)) {
                     mob.beckon(hero.getPos());
                 }
             }
@@ -316,7 +281,7 @@ public class GameScene extends PixelScene {
         spells = new Group();
         add(spells);
 
-        if(roofTiles!=null) {
+        if (roofTiles != null) {
             add(roofTiles);
         }
 
@@ -334,7 +299,6 @@ public class GameScene extends PixelScene {
 
         add(new HealthIndicator());
 
-        add(cellSelector = new CellSelector(baseTiles));
 
         statusPane = new StatusPane(hero, level);
         statusPane.camera = uiCamera;
@@ -399,6 +363,7 @@ public class GameScene extends PixelScene {
         InterlevelScene.Mode appearMode = InterlevelScene.mode;
         InterlevelScene.mode = InterlevelScene.Mode.CONTINUE;
 
+        Actor.add(hero);
         hero.regenSprite();
         //it is a chance for another level change right here if level entrance is at CHASM for example
         switch (appearMode) {
@@ -426,40 +391,45 @@ public class GameScene extends PixelScene {
         Camera.main.setTarget(hero.getHeroSprite());
 
         level.activateScripts();
-        LevelTools.upgradeMap(level); // Epic level gen compatibility
 
-        for (var lo: level.getAllLevelObjects()) {
+        LevelTools.upgradeMap(level);
+
+        level.addVisuals(this);
+
+        for (var lo : level.getAllLevelObjects()) {
             lo.lo_sprite.clear();
             addLevelObjectSprite(lo);
             lo.addedToScene();
         }
 
-        for(var mob: level.getCopyOfMobsArray()) {
+        for (var mob : level.getCopyOfMobsArray()) {
             mob.onSpawn(level);
         }
 
         mapBuildingComplete = true; // Epic level gen compatibility speedup
         updateMap();
 
+
         fadeIn();
+        Actor.fixTime();
 
         Dungeon.observe();
         hero.updateSprite();
         hero.readyAndIdle();
         QuickSlot.refresh(hero);
 
-        doSelfTest();
+        //doSelfTest();
 
         final double moveTimeout = Dungeon.moveTimeout();
         final boolean realtime = Dungeon.realtime();
 
-        if(realtime || moveTimeout < Double.POSITIVE_INFINITY) {
+        if (realtime || moveTimeout < Double.POSITIVE_INFINITY) {
 
             String msg = "";
-            if(realtime) {
+            if (realtime) {
                 msg += StringsManager.getVar(R.string.WrnExperimental_realtime);
             } else {
-                msg += Utils.format(R.string.WrnExperimental_moveTimeout, (int)moveTimeout);
+                msg += Utils.format(R.string.WrnExperimental_moveTimeout, (int) moveTimeout);
             }
 
             msg += "\n\n";
@@ -472,10 +442,76 @@ public class GameScene extends PixelScene {
         }
     }
 
+    private void createTerrain(Level level) {
+        if (terrain != null) {
+            remove(terrain);
+            remove(roofTiles);
+            remove(doorTiles);
+        }
+
+
+        terrain = new Group();
+        add(terrain);
+        sendToBack(terrain);
+
+        water = new SkinnedBlock(level.getWidth() * DungeonTilemap.SIZE,
+                level.getHeight() * DungeonTilemap.SIZE, level.getWaterTex());
+
+        waterSx = DungeonGenerator.getLevelProperty(level.levelId, "waterSx", waterSx);
+        waterSy = DungeonGenerator.getLevelProperty(level.levelId, "waterSy", waterSy);
+
+        terrain.add(water);
+
+        ripples = new Group();
+        terrain.add(ripples);
+
+        String logicTilesAtlas = level.getProperty("tiles_logic", "");
+
+        if (!logicTilesAtlas.isEmpty()) {
+            logicTiles = new ClassicDungeonTilemap(level, logicTilesAtlas);
+            terrain.add(logicTiles);
+        }
+
+        if (!level.customTiles()) {
+            baseTiles = DungeonTilemap.factory(level);
+
+            if (baseTiles instanceof XyzDungeonTilemap) {
+                doorTiles = ((XyzDungeonTilemap) baseTiles).doorTilemap();
+                roofTiles = ((XyzDungeonTilemap) baseTiles).roofTilemap();
+            }
+
+        } else {
+            CustomLayerTilemap tiles = new CustomLayerTilemap(level, Level.LayerId.Base);
+            tiles.addLayer(Level.LayerId.Deco);
+            tiles.addLayer(Level.LayerId.Deco2);
+            baseTiles = tiles;
+
+            tiles = new CustomLayerTilemap(level, Level.LayerId.Roof_Base);
+            tiles.addLayer(Level.LayerId.Roof_Deco);
+            tiles.setTransparent(true);
+            roofTiles = tiles;
+        }
+        terrain.add(baseTiles);
+
+        if (cellSelector != null) {
+            remove(cellSelector);
+        }
+
+        if (spells != null) {
+            if (roofTiles != null) {
+                addAfter(roofTiles, spells);
+            }
+            if (doorTiles != null) {
+                addAfter(doorTiles, heaps);
+            }
+        }
+        add(cellSelector = new CellSelector(baseTiles));
+    }
+
     private void doSelfTest() {
         final Level level = Dungeon.level;
-        if(Util.isDebug()) {
-            for (int i = 0; i< level.map.length; ++i) {
+        if (Util.isDebug()) {
+            for (int i = 0; i < level.map.length; ++i) {
                 level.tileDescByCell(i);
                 level.tileNameByCell(i);
             }
@@ -483,10 +519,10 @@ public class GameScene extends PixelScene {
             GLog.debug(Dungeon.hero.immunities().toString());
             //GLog.toFile(StringsManager.missingStrings.toString());
 
-            if(!(level instanceof TestLevel) && !ModdingMode.inMod()) {
+            if (!(level instanceof TestLevel) && !ModdingBase.inMod()) {
                 for (var lo : level.getAllLevelObjects()) {
                     int pos = lo.getPos();
-                    if (!TerrainFlags.is(level.map[pos],TerrainFlags.PASSABLE)) {
+                    if (!TerrainFlags.is(level.map[pos], TerrainFlags.PASSABLE)) {
                         throw new ModError(Utils.format("%s on a non-passable cell %d (%d) . level %s", lo.getEntityKind(), pos, level.map[pos], level.levelId));
                     }
 
@@ -497,7 +533,7 @@ public class GameScene extends PixelScene {
             }
         }
 
-        if(level instanceof TestLevel) {
+        if (level instanceof TestLevel) {
             TestLevel testLevel = (TestLevel) level;
             testLevel.runEquipTest();
             testLevel.runMobsTest();
@@ -514,16 +550,13 @@ public class GameScene extends PixelScene {
     @Override
     public void pause() {
         synchronized (GameLoop.stepLock) {
-            if (!GameLoop.softPaused) {
-                final Hero hero = Dungeon.hero;
-                if (hero.isAlive()) {
-                    Dungeon.save(false);
-                }
+            if (!Game.softPaused) {
+                Dungeon.save(false);
             }
         }
     }
 
-    private static transient boolean observeRequested = false;
+    private static boolean observeRequested = false;
 
     public static void observeRequest() {
         observeRequested = true;
@@ -545,15 +578,18 @@ public class GameScene extends PixelScene {
             return;
         }
 
-        if(!Dungeon.level.cellValid(hero.getPos())){
+        if (!Dungeon.level.cellValid(hero.getPos())) {
             return;
         }
 
-
-        if(objectSortingRequested) {
-            objects.sort();
-            objectSortingRequested = false;
+        if (Dungeon.visible.length != Dungeon.level.map.length) {
+            throw new TrackedRuntimeException("Dungeon.visible.length != level.map.length");
         }
+
+        if (Dungeon.visible.length != fog.getLength()) {
+            throw new TrackedRuntimeException("Dungeon.visible.length != fog.getLength()");
+        }
+
         super.update();
 
         water.offset(waterSx * GameLoop.elapsed, waterSy * GameLoop.elapsed);
@@ -564,16 +600,14 @@ public class GameScene extends PixelScene {
             log.newLine();
         }
 
-        if(observeRequested) {
+        if (observeRequested) {
             Dungeon.observeImpl();
         }
     }
 
     @Override
     protected void onBackPressed() {
-        if (!cancel()) {
-            add(new WndGame());
-        }
+        add(new WndInGameMenu());
     }
 
     @Override
@@ -583,13 +617,80 @@ public class GameScene extends PixelScene {
         }
     }
 
+
+    private static int tx, ty, ox, oy;
+    @Override
+    protected void onKeyPressed(int keyCode) {
+        if (!isSceneReady()) {
+            return;
+        }
+
+        Hero hero = Dungeon.hero;
+
+
+        if (!hero.isReady()) {
+            return;
+        }
+
+        Level level = Dungeon.level;
+
+        //GLog.debug("Keycode: %d", keyCode);
+        switch (keyCode) {
+            case Keys.Key.BEGIN_OF_FRAME:
+                int pos = hero.getPos();
+                tx = ox = level.cellX(pos);
+                ty = oy = level.cellY(pos);
+                return;
+
+            case Keys.Key.END_OF_FRAME:
+                tx = Util.clamp(tx, ox-1,ox+1);
+                ty = Util.clamp(ty,oy-1, oy+1);
+                if(tx != ox || ty != oy) {
+                    handleCell(level.cell(tx, ty));
+                    tx = ox; //Because BEGIN_OF_FRAME cloud be consumed by active window.
+                    ty = oy;
+                }
+                return;
+
+            case KeyEvent.KEYCODE_DPAD_UP:
+                ty--;
+                break;
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+                ty++;
+                break;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                tx--;
+                break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                tx++;
+                break;
+
+            case KeyEvent.KEYCODE_I:
+                    selectItem(hero, null, Mode.ALL, null);
+                return;
+
+            case KeyEvent.KEYCODE_E:
+                hero.selectCell(informer);
+                return;
+
+            case KeyEvent.KEYCODE_S:
+                hero.search(true);
+                return;
+
+            case KeyEvent.KEYCODE_SPACE:
+                hero.rest(false);
+                return;
+            default:
+        }
+    }
+
     public void brightness(boolean value) {
 
         float levelLimit = Math.min(Dungeon.level.getProperty("maxBrightness", MAX_BRIGHTNESS),
-                DungeonGenerator.getLevelProperty(Dungeon.level.levelId,"maxBrightness", MAX_BRIGHTNESS));
+                DungeonGenerator.getLevelProperty(Dungeon.level.levelId, "maxBrightness", MAX_BRIGHTNESS));
 
 
-        float brightnessValue =  value ? Math.min(MAX_BRIGHTNESS, levelLimit)  : 1.0f;
+        float brightnessValue = value ? Math.min(MAX_BRIGHTNESS, levelLimit) : 1.0f;
 
         water.brightness(brightnessValue);
         baseTiles.brightness(brightnessValue);
@@ -598,16 +699,15 @@ public class GameScene extends PixelScene {
             logicTiles.brightness(brightnessValue);
         }
 
-        if(roofTiles != null) {
+        if (roofTiles != null) {
             roofTiles.brightness(brightnessValue);
         }
     }
 
     private void addLevelObjectSprite(@NotNull LevelObject obj) {
-        obj.lo_sprite = WeakOptional.of( (LevelObjectSprite)objects.recycle(LevelObjectSprite.class) );
-        obj.lo_sprite.ifPresent (sprite -> sprite.reset(obj));
+        obj.lo_sprite = WeakOptional.of((LevelObjectSprite) objects.recycle(LevelObjectSprite.class));
+        obj.lo_sprite.ifPresent(sprite -> sprite.reset(obj));
         obj.addedToScene();
-        objectSortingRequested = true;
     }
 
     private void addHeapSprite(@NotNull Heap heap) {
@@ -619,12 +719,12 @@ public class GameScene extends PixelScene {
     }
 
     private void addDiscardedSprite(@NotNull Heap heap) {
-        heap.sprite = (DiscardedItemSprite) heaps.recycle(DiscardedItemSprite.class);
-        heap.sprite.setIsometricShift(true);
-        heap.sprite.revive();
-        heap.sprite.link(heap);
-        heap.sprite.setIsometricShift(true);
-        heaps.add(heap.sprite);
+        ItemSprite sprite = heap.sprite = (DiscardedItemSprite) heaps.recycle(DiscardedItemSprite.class);
+        sprite.setIsometricShift(true);
+        sprite.revive();
+        sprite.link(heap);
+        sprite.setIsometricShift(true);
+        heaps.add(sprite);
     }
 
     private static void addBlobSprite(final Blob gas) {
@@ -651,7 +751,7 @@ public class GameScene extends PixelScene {
 
     @LuaInterface
     public static void showBanner(Banner banner) {
-        if(isSceneReady()) {
+        if (isSceneReady()) {
             banner.camera = uiCamera;
             banner.setX(align(uiCamera, (uiCamera.width - banner.width) / 2));
             banner.setY(align(uiCamera, (uiCamera.height - banner.height) / 3));
@@ -716,6 +816,10 @@ public class GameScene extends PixelScene {
     @LuaInterface
     public static Group particleEffect(String effectName, int cell) {
         if (isSceneReady()) {
+            if (!Dungeon.level.cellValid(cell)) {
+                throw new TrackedRuntimeException(Utils.format("Invalid cell %d for particle effect %s", cell, effectName));
+            }
+
             Group effect = ParticleEffect.addToCell(effectName, cell);
             effect.setIsometricShift(Dungeon.isIsometricMode());
             scene.add(effect);
@@ -775,7 +879,7 @@ public class GameScene extends PixelScene {
     }
 
     public static void pickUp(Item item) {
-        if(isSceneReady()) {
+        if (isSceneReady()) {
             scene.toolbar.pickup(item);
         }
     }
@@ -789,7 +893,7 @@ public class GameScene extends PixelScene {
     public static void updateMap(int cell) {
         if (isSceneReady() && scene.mapBuildingComplete) {
             final Level level = Dungeon.level;
-            if(level.cellValid(cell)) {
+            if (level.cellValid(cell)) {
                 scene.baseTiles.updateCell(cell, level);
             } else {
                 EventCollector.logException(Utils.format("Attempt to update invalid %d on %s", cell, level.levelId));
@@ -802,7 +906,7 @@ public class GameScene extends PixelScene {
             final Level level = Dungeon.level;
             scene.baseTiles.updateCell(cell, level);
             final int cellN = cell - level.getWidth();
-            if(level.cellValid(cellN)) {
+            if (level.cellValid(cellN)) {
                 scene.baseTiles.updateCell(cellN, level);
             }
         }
@@ -824,24 +928,22 @@ public class GameScene extends PixelScene {
     public static void show(Window wnd) {
         cancelCellSelector();
         if (isSceneReady() && scene.sceneCreated) {
-            GameLoop.pushUiTask(()-> scene.add(wnd));
+            GameLoop.pushUiTask(() -> scene.add(wnd));
         }
     }
 
     public static void afterObserve() {
         if (isSceneReady() && scene.sceneCreated) {
-            GameLoop.pushUiTask(() -> {
-                final Level level = Dungeon.level;
+            final Level level = Dungeon.level;
 
-                GameScene.updateMap();
-                scene.baseTiles.updateFow(scene.fog);
+            GameScene.updateMap();
+            scene.baseTiles.updateFow(scene.fog);
 
-                for (Mob mob : level.mobs) {
-                    mob.getSprite().setVisible(Dungeon.visible[mob.getPos()]);
-                }
+            for (Mob mob : level.mobs) {
+                mob.getSprite().setVisible(Dungeon.visible[mob.getPos()]);
+            }
 
-                observeRequested = false;
-            });
+            observeRequested = false;
         }
     }
 
@@ -874,21 +976,21 @@ public class GameScene extends PixelScene {
 
     @LuaInterface
     public static void handleCell(int cell) {
-        if(isSceneReady()) {
+        if (isSceneReady()) {
             cellSelector.select(cell);
         }
     }
 
     public static void selectCell(CellSelector.Listener listener, Char selector) {
 
-        if(listener == cellSelector.listener && selector == cellSelector.selector) {
+        if (listener == cellSelector.listener && selector == cellSelector.selector) {
             return;
         }
 
-        if(isSceneReady()) {
+        if (isSceneReady()) {
 
             if (cellSelector != null && cellSelector.listener != null && cellSelector.listener != defaultCellListener) {
-                cellSelector.listener.onSelect( null, cellSelector.selector);
+                cellSelector.listener.onSelect(null, cellSelector.selector);
             }
 
             cellSelector.listener = listener;
@@ -936,7 +1038,7 @@ public class GameScene extends PixelScene {
     static public boolean cancel() {
         Hero hero = Dungeon.hero;
 
-        if(hero.valid()) {
+        if (hero.valid()) {
             hero.next();
             if (hero.getCurAction() != null || hero.restoreHealth) {
 
@@ -960,7 +1062,7 @@ public class GameScene extends PixelScene {
     public void updateToolbar(boolean reset) {
         if (toolbar != null) {
 
-            if(reset) {
+            if (reset) {
                 toolbar.destroy();
 
                 toolbar = new Toolbar(Dungeon.hero);
@@ -970,12 +1072,12 @@ public class GameScene extends PixelScene {
             toolbar.setRect(0, uiCamera.height - toolbar.height(), uiCamera.width, toolbar.height());
             add(toolbar);
 
-            if(attack != null) {
+            if (attack != null) {
                 attack.camera = uiCamera;
                 attack.setPos(uiCamera.width - attack.width(), toolbar.top() - attack.height());
                 attack.update();
             }
-            if(resume != null) {
+            if (resume != null) {
                 resume.camera = uiCamera;
                 resume.setPos(uiCamera.width - resume.width(), attack.top() - resume.height());
                 resume.update();
@@ -987,7 +1089,7 @@ public class GameScene extends PixelScene {
     public void resume() {
         super.resume();
 
-        if(Dungeon.heroClass == HeroClass.NONE) { // no active game in progress
+        if (Dungeon.heroClass == HeroClass.NONE) { // no active game in progress
             GameLoop.switchScene(TitleScene.class);
             return;
         }
@@ -995,14 +1097,22 @@ public class GameScene extends PixelScene {
         InterlevelScene.Do(InterlevelScene.Mode.CONTINUE);
     }
 
-    public static void addMobSpriteDirect(Char chr,CharSprite sprite) {
+    public static void addMobSpriteDirect(Char chr, CharSprite sprite) {
         if (isSceneReady()) {
-            if(chr.getWalkingType() == WalkingType.WALL || chr.getWalkingType() == WalkingType.ABSOLUTE) {
+            if (chr.getWalkingType() == WalkingType.WALL || chr.getWalkingType() == WalkingType.ABSOLUTE) {
                 scene.topMobs.add(sprite);
             } else {
                 scene.mobs.add(sprite);
             }
         }
+    }
+
+    @Nullable
+    public static Group getMobsLayer() {
+        if (isSceneReady()) {
+            return scene.mobs;
+        }
+        return null;
     }
 
     public static void addToMobLayer(Gizmo gizmo) {
@@ -1014,7 +1124,7 @@ public class GameScene extends PixelScene {
     public static Image getTile(int cell) {
         Image ret;
 
-        if(scene.roofTiles!=null) {
+        if (scene.roofTiles != null) {
             ret = scene.roofTiles.tile(cell);
 
             if (ret != null) {
@@ -1031,7 +1141,7 @@ public class GameScene extends PixelScene {
     }
 
     static public boolean defaultCellSelector() {
-        if(isSceneReady()) {
+        if (isSceneReady()) {
             return cellSelector.defaultListener();
         }
         return true;
@@ -1039,7 +1149,7 @@ public class GameScene extends PixelScene {
 
     @LuaInterface
     static DungeonTilemap getBaseTiles() {
-        if(isSceneReady()) {
+        if (isSceneReady()) {
             return scene.baseTiles;
         }
         throw new IllegalStateException("Scene not ready");

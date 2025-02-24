@@ -18,6 +18,7 @@
 package com.watabou.noosa;
 
 import com.nyrds.platform.compatibility.RectF;
+import com.nyrds.platform.gl.NoosaScript;
 import com.watabou.gltextures.SmartTexture;
 import com.watabou.gltextures.TextureCache;
 import com.watabou.glwrap.Quad;
@@ -30,7 +31,6 @@ import java.util.Arrays;
 
 import lombok.Getter;
 import lombok.Setter;
-
 public class Tilemap extends Visual {
 
 	@Getter
@@ -48,10 +48,10 @@ public class Tilemap extends Visual {
 	private final float cellW;
 	private final float cellH;
 
-	protected float[]     vertices;
+	protected final float[]     vertices;
 	protected FloatBuffer quads;
 	
-	protected Rect updated;
+	protected final Rect updated;
 	
 	public Tilemap( Object tx, TextureFilm tileset ) {
 		
@@ -76,7 +76,7 @@ public class Tilemap extends Visual {
 		mapWidth = cols;
 
 		int mapHeight = data.length / cols;
-		size = mapWidth * mapHeight;
+		size = data.length;
 		
 		setWidth(cellW * mapWidth);
 		setHeight(cellH * mapHeight);
